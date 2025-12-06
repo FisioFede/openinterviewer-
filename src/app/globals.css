@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1c1917;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #57534e;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #78716c;
+}
+
+/* Preview mode banner */
+.preview-banner {
+  background: linear-gradient(90deg, #44403c 0%, #292524 50%, #44403c 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+.preview-banner-pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Prose styling for markdown */
+.prose {
+  color: #e7e5e4;
+}
+
+.prose strong {
+  color: #fafaf9;
+}
+
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+}
+
+.prose ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+}
+
+.prose p {
+  margin-bottom: 0.5em;
+}
+
+/* Button focus states */
+button:focus-visible {
+  outline: 2px solid #78716c;
+  outline-offset: 2px;
+}
+
+/* Input focus states */
+input:focus, textarea:focus {
+  outline: none;
+}
