@@ -20,7 +20,8 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
-  Loader2
+  Loader2,
+  LogIn
 } from 'lucide-react';
 
 // Common profile field presets
@@ -60,9 +61,26 @@ const StudySetup: React.FC = () => {
   const [participantLink, setParticipantLink] = useState<string | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   // Preview state
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  // Check auth status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth', { method: 'GET' });
+        setIsAuthenticated(res.ok);
+      } catch {
+        setIsAuthenticated(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Sync form with studyConfig when it changes (e.g., after loading example)
   useEffect(() => {
@@ -180,6 +198,7 @@ const StudySetup: React.FC = () => {
 
   const handleGenerateLink = async () => {
     setIsGeneratingLink(true);
+    setLinkError(null);
     try {
       const config = buildConfig();
       setStudyConfig(config);
@@ -190,11 +209,22 @@ const StudySetup: React.FC = () => {
         body: JSON.stringify({ studyConfig: config })
       });
 
+      if (!response.ok) {
+        if (response.status === 401) {
+          setLinkError('auth');
+          setIsAuthenticated(false);
+        } else {
+          const data = await response.json();
+          setLinkError(data.error || 'Failed to generate link');
+        }
+        return;
+      }
+
       const data = await response.json();
-      // API returns absolute URL, use directly
       setParticipantLink(data.url);
     } catch (error) {
       console.error('Error generating link:', error);
+      setLinkError('Network error. Please try again.');
     } finally {
       setIsGeneratingLink(false);
     }
@@ -554,6 +584,7 @@ const StudySetup: React.FC = () => {
                       className="flex-1 px-4 py-3 rounded-xl bg-stone-800 border border-stone-600 text-stone-300 text-sm font-mono"
                     />
                     <button
+                      type="button"
                       onClick={handleCopyLink}
                       className="px-4 py-3 bg-stone-700 hover:bg-stone-600 text-stone-300 rounded-xl transition-colors flex items-center gap-2"
                     >
@@ -565,15 +596,35 @@ const StudySetup: React.FC = () => {
                     Share this link with participants. The study configuration is embedded in the URL.
                   </p>
                 </div>
+              ) : isAuthenticated === false || linkError === 'auth' ? (
+                <div className="space-y-3">
+                  <div className="bg-stone-800 border border-stone-600 rounded-xl p-4 text-sm text-stone-300">
+                    <p className="mb-3">Login required to generate participant links.</p>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/login')}
+                      className="px-4 py-2 bg-stone-600 hover:bg-stone-500 text-white rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <LogIn size={16} />
+                      Login as Researcher
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <button
-                  onClick={handleGenerateLink}
-                  disabled={isGeneratingLink}
-                  className="w-full py-3 bg-stone-700 hover:bg-stone-600 text-stone-300 font-medium rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <LinkIcon size={18} />
-                  {isGeneratingLink ? 'Generating...' : 'Generate Participant Link'}
-                </button>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={handleGenerateLink}
+                    disabled={isGeneratingLink}
+                    className="w-full py-3 bg-stone-700 hover:bg-stone-600 text-stone-300 font-medium rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <LinkIcon size={18} />
+                    {isGeneratingLink ? 'Generating...' : 'Generate Participant Link'}
+                  </button>
+                  {linkError && linkError !== 'auth' && (
+                    <p className="text-sm text-red-400">{linkError}</p>
+                  )}
+                </div>
               )}
             </div>
           )}
