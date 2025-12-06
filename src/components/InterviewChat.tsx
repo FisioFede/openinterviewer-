@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store';
 import {
@@ -31,6 +32,7 @@ const phaseLabels: Record<InterviewPhase, string> = {
 };
 
 const InterviewChat: React.FC = () => {
+  const router = useRouter();
   const {
     studyConfig,
     participantProfile,
@@ -188,6 +190,7 @@ const InterviewChat: React.FC = () => {
 
   const handleViewAnalysis = () => {
     setStep('synthesis');
+    router.push('/synthesis');
   };
 
   const toggleRecording = () => {

@@ -1,11 +1,13 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store';
 import { Shield, ArrowRight, ArrowLeft, MessageSquare, Clock, HelpCircle } from 'lucide-react';
 
 const Consent: React.FC = () => {
+  const router = useRouter();
   const { studyConfig, giveConsent, setStep, viewMode, initializeProfile } = useStore();
 
   const handleConsent = () => {
@@ -16,10 +18,12 @@ const Consent: React.FC = () => {
     }
     // Skip directly to interview (merged intake/profile into conversation)
     setStep('interview');
+    router.push('/interview');
   };
 
   const handleBack = () => {
     setStep('setup');
+    router.push('/setup');
   };
 
   if (!studyConfig) {

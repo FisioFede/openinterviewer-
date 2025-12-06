@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store';
 import { generateParticipantLink } from '@/services/geminiService';
@@ -32,6 +33,7 @@ const PROFILE_PRESETS: ProfileField[] = [
 ];
 
 const StudySetup: React.FC = () => {
+  const router = useRouter();
   const { setStudyConfig, setStep, studyConfig, loadExampleStudy, setViewMode, setParticipantToken } = useStore();
 
   const [name, setName] = useState(studyConfig?.name || '');
@@ -152,6 +154,7 @@ const StudySetup: React.FC = () => {
     const config = buildConfig();
     setStudyConfig(config);
     setStep('consent');
+    router.push('/consent');
   };
 
   const handlePreview = async () => {
@@ -172,6 +175,7 @@ const StudySetup: React.FC = () => {
     setIsPreviewLoading(false);
     setViewMode('participant');
     setStep('consent');
+    router.push('/consent');
   };
 
   const handleGenerateLink = async () => {

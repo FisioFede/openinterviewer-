@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store';
 import { synthesizeInterview } from '@/services/geminiService';
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 
 const Synthesis: React.FC = () => {
+  const router = useRouter();
   const {
     studyConfig,
     participantProfile,
@@ -138,10 +140,12 @@ const Synthesis: React.FC = () => {
 
   const handleBack = () => {
     setStep('interview');
+    router.push('/interview');
   };
 
   const handleExport = () => {
     setStep('export');
+    router.push('/export');
   };
 
   if (!studyConfig) {
