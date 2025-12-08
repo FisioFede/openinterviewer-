@@ -1,6 +1,8 @@
 // POST /api/auth - Researcher login
 // Uses signed JWT session tokens for security
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import {

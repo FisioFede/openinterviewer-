@@ -2,6 +2,8 @@
 // POST /api/studies - Create new study
 // Protected: Requires authenticated session
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getAllStudies, saveStudy, isKVAvailable } from '@/lib/kv';
 import { cookies } from 'next/headers';

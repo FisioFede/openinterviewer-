@@ -1,6 +1,8 @@
 // GET /api/interviews - List all interviews (or filter by studyId)
 // Protected: Requires authenticated session
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getAllInterviews, getStudyInterviews, isKVAvailable } from '@/lib/kv';
 import { cookies } from 'next/headers';

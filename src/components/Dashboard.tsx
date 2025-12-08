@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
 
   const loadStudies = async () => {
     try {
-      const data = await getAllStudies();
+      const { studies: data } = await getAllStudies();
       setStudies(data);
     } catch (error) {
       console.error('Error loading studies:', error);

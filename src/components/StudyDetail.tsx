@@ -24,7 +24,9 @@ import {
   GitBranch,
   Link as LinkIcon,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface StudyDetailProps {
@@ -43,6 +45,9 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
   const [isGeneratingAggregate, setIsGeneratingAggregate] = useState(false);
   const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
   const [isTogglingLinks, setIsTogglingLinks] = useState(false);
+  const [participantLink, setParticipantLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
 
   useEffect(() => {
     loadStudyData();
@@ -99,6 +104,42 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
       alert('Failed to update link settings');
     } finally {
       setIsTogglingLinks(false);
+    }
+  };
+
+  const handleGenerateLink = async () => {
+    if (!study) return;
+
+    setGeneratingLink(true);
+    try {
+      const response = await fetch('/api/generate-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studyConfig: study.config })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate link');
+      }
+
+      const data = await response.json();
+      if (data.url) {
+        setParticipantLink(data.url);
+      }
+    } catch (error) {
+      console.error('Error generating link:', error);
+      alert(error instanceof Error ? error.message : 'Failed to generate link');
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (participantLink) {
+      navigator.clipboard.writeText(participantLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -529,11 +570,11 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
 
                 <div className="flex items-center justify-between p-4 bg-stone-900/50 rounded-xl">
                   <div>
-                    <div className="font-medium text-stone-200">Participant Links</div>
+                    <div className="font-medium text-stone-200">Participant Access</div>
                     <p className="text-sm text-stone-400">
                       {(study.config.linksEnabled ?? true)
-                        ? 'Links are active - participants can access the study'
-                        : 'Links are revoked - participants will see an error'}
+                        ? 'Access enabled - participants can use the link below'
+                        : 'Access disabled - the same link will show an error until re-enabled'}
                     </p>
                   </div>
                   <button
@@ -563,6 +604,51 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
                     Warning: All participant links are currently disabled. Participants trying to access the study will see an error message.
                   </div>
                 )}
+              </div>
+
+              {/* Participant Link Generator */}
+              <div className="bg-stone-800/50 rounded-xl border border-stone-700 p-6">
+                <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                  <LinkIcon size={18} />
+                  Participant Link
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Generate Button */}
+                  <button
+                    onClick={handleGenerateLink}
+                    disabled={generatingLink || !(study.config.linksEnabled ?? true)}
+                    className="px-4 py-2 bg-stone-600 hover:bg-stone-500 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {generatingLink ? <Loader2 size={16} className="animate-spin" /> : <LinkIcon size={16} />}
+                    Generate New Link
+                  </button>
+
+                  {/* Link Display (when generated) */}
+                  {participantLink && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={participantLink}
+                        readOnly
+                        className="flex-1 bg-stone-900 border border-stone-600 rounded-lg px-3 py-2 text-stone-300 text-sm font-mono"
+                      />
+                      <button
+                        onClick={handleCopyLink}
+                        className="px-3 py-2 bg-stone-700 hover:bg-stone-600 text-stone-300 rounded-lg flex items-center gap-1"
+                      >
+                        {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                        {copied ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Explanation */}
+                  <p className="text-xs text-stone-500">
+                    Each click generates a new unique link. All links share the same enable/disable toggle above.
+                    {!(study.config.linksEnabled ?? true) && ' Links are currently disabled - enable access above first.'}
+                  </p>
+                </div>
               </div>
             </div>
           )}

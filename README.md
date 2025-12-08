@@ -111,6 +111,101 @@ vercel link
 vercel env pull .env.local
 ```
 
+## Storage Setup (Vercel KV via Upstash)
+
+OpenInterviewer uses Vercel KV (powered by Upstash Redis) to persist studies and interview data. Without storage configured, studies won't be saved and interviews won't persist.
+
+### Setting Up Vercel KV
+
+**Step 1: Create Upstash Redis Database**
+
+1. Go to your [Vercel Dashboard](https://vercel.com)
+2. Select your **openinterviewer** project
+3. Click the **"Storage"** tab
+4. Click **"Upstash"**
+5. Click **"Create Database"**
+6. Select **"Redis"** (not Kafka)
+7. Fill in:
+   - **Name**: `openinterviewer` (or any name)
+   - **Primary Region**: Choose closest to your users (e.g., `us-east-1`)
+   - Leave other settings as default
+8. Click **"Create"**
+
+**Step 2: Connect Database to Project**
+
+1. After creation, click **"Connect Project"** button
+2. Select your **openinterviewer** project from the dropdown
+3. Choose environments to connect (select all: Production, Preview, Development)
+4. Click **"Connect"**
+
+**Step 3: Redeploy**
+
+1. Go to the **"Deployments"** tab
+2. Find your latest deployment
+3. Click **"..."** menu → **"Redeploy"**
+4. Wait for deployment to complete (~1-2 minutes)
+
+**Step 4: Verify**
+
+1. Visit your app and log in
+2. Create and save a study
+3. Navigate to "My Studies" - the study should now appear!
+
+### Free Tier Limits (Vercel Hobby Plan)
+
+- 10,000 commands/day
+- 256MB storage
+- Sufficient for testing and small-scale research
+
+### Environment Variables (Auto-configured)
+
+When you connect the database, these are automatically added:
+
+- `KV_REST_API_URL`
+- `KV_REST_API_TOKEN`
+- `KV_REST_API_READ_ONLY_TOKEN`
+- `KV_URL`
+
+## Demo Data
+
+To explore the full platform workflow without running actual interviews, you can load demo data:
+
+### Loading Demo Data
+
+1. Log in to your researcher dashboard
+2. Navigate to **My Studies** (`/studies`)
+3. Click **"Load Demo"** button (purple button in header)
+4. Or, if no studies exist, click **"Load Demo Data"** in the empty state
+
+### What's Included
+
+The demo includes:
+
+- **1 Demo Study**: "The Adaptive Self: Professional Identity in the Age of AI"
+  - 5 core research questions about AI impact on professional identity
+  - Profile schema: role, AI usage frequency, comfort level, industry
+  - AI reasoning enabled for synthesis
+
+- **3 Complete Interviews**:
+  - **Sarah** (Product Manager) - Enthusiastic AI adopter, found new strategic role
+  - **Marcus** (UX Designer) - Initial skeptic turned converted user
+  - **Priya** (Content Manager) - Efficiency vs authenticity tension
+
+- **Full Analysis**: Each interview includes synthesis with themes, contradictions, and insights
+
+### Exploring Features
+
+With demo data loaded, you can:
+
+1. **View Individual Interviews**: Click any interview to see full transcript
+2. **Per-Interview Synthesis**: See stated vs revealed preferences, themes
+3. **Aggregate Analysis**: Run cross-interview analysis to see patterns
+4. **Follow-up Studies**: Generate new studies based on findings
+
+### Clearing Demo Data
+
+Click **"Clear Demo"** (amber button in header) to remove all demo data and start fresh.
+
 ## Project Structure
 
 ```text

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import PreviewBanner from '@/components/PreviewBanner'
 
 export const metadata: Metadata = {
   title: 'Research Interview Tool',
@@ -14,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-stone-900 font-sans antialiased">
+        <PreviewBanner />
         {children}
       </body>
     </html>

@@ -1,6 +1,8 @@
 // GET /api/interviews/[id] - Get single interview
 // Protected: Requires authenticated session
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getInterview } from '@/lib/kv';
 import { cookies } from 'next/headers';

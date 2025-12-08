@@ -1,6 +1,8 @@
 // GET /api/interviews/export - Export all interviews as ZIP
 // Protected: Requires authenticated session
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getAllInterviews, isKVAvailable } from '@/lib/kv';
 import { cookies } from 'next/headers';

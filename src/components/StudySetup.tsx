@@ -96,6 +96,7 @@ const StudySetup: React.FC = () => {
   const [savedStudyId, setSavedStudyId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
   // Config status (API keys)
@@ -390,6 +391,7 @@ const StudySetup: React.FC = () => {
 
     setIsSaving(true);
     setSaveSuccess(false);
+    setSaveError(null);
 
     try {
       const config = buildConfig();
@@ -409,6 +411,12 @@ const StudySetup: React.FC = () => {
         if (response.status === 401) {
           setIsAuthenticated(false);
           router.push('/login');
+          return;
+        }
+
+        // Handle storage not configured (503)
+        if (response.status === 503) {
+          setSaveError('Storage not configured. Please connect Vercel KV (Upstash Redis) in your deployment settings.');
           return;
         }
 
@@ -439,6 +447,10 @@ const StudySetup: React.FC = () => {
             return;
           }
         }
+
+        // Generic error
+        const data = await response.json().catch(() => ({}));
+        setSaveError(data.error || 'Failed to save study. Please try again.');
         return;
       }
 
@@ -452,6 +464,7 @@ const StudySetup: React.FC = () => {
       router.push(`/studies/${data.study.id}`);
     } catch (error) {
       console.error('Error saving study:', error);
+      setSaveError('Network error. Please check your connection and try again.');
     } finally {
       setIsSaving(false);
     }
@@ -567,6 +580,36 @@ const StudySetup: React.FC = () => {
             Configure your research interview study
           </p>
         </motion.div>
+
+        {/* Save Error Banner */}
+        {saveError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 flex items-start gap-3"
+          >
+            <div className="text-red-400 flex-shrink-0 mt-0.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h4 className="font-medium text-red-300 mb-1">Save Failed</h4>
+              <p className="text-sm text-red-400/80">{saveError}</p>
+            </div>
+            <button
+              onClick={() => setSaveError(null)}
+              className="text-red-400 hover:text-red-300 flex-shrink-0"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

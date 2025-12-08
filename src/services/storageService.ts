@@ -103,7 +103,7 @@ export async function getStudyInterviews(studyId: string): Promise<StoredIntervi
 }
 
 // Get all studies (researcher only)
-export async function getAllStudies(): Promise<StoredStudy[]> {
+export async function getAllStudies(): Promise<{ studies: StoredStudy[]; warning?: string }> {
   try {
     const response = await fetch('/api/studies');
 
@@ -112,10 +112,13 @@ export async function getAllStudies(): Promise<StoredStudy[]> {
     }
 
     const data = await response.json();
-    return data.studies || [];
+    return {
+      studies: data.studies || [],
+      warning: data.warning
+    };
   } catch (error) {
     console.error('Error fetching studies:', error);
-    return [];
+    return { studies: [] };
   }
 }
 

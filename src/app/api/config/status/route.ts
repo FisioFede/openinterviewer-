@@ -1,6 +1,8 @@
 // GET /api/config/status - Returns which optional API keys are configured
 // Only returns boolean status, never actual key values
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';

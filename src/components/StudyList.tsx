@@ -17,25 +17,11 @@ import {
   Eye,
   Link as LinkIcon,
   MoreVertical,
-  LogOut
+  LogOut,
+  AlertTriangle,
+  Database,
+  Sparkles
 } from 'lucide-react';
-
-// Preset gradient palettes (50% opacity for punch on dark bg-stone-900)
-const gradients = [
-  'from-rose-900/50 to-stone-800/50',
-  'from-amber-900/50 to-stone-800/50',
-  'from-emerald-900/50 to-stone-800/50',
-  'from-blue-900/50 to-stone-800/50',
-  'from-purple-900/50 to-stone-800/50',
-  'from-cyan-900/50 to-stone-800/50',
-];
-
-// Hash first topic area to pick a consistent gradient
-const getStudyGradient = (topicAreas: string[]) => {
-  if (!topicAreas?.length) return gradients[0];
-  const hash = topicAreas[0].split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return gradients[hash % gradients.length];
-};
 
 const StudyList: React.FC = () => {
   const router = useRouter();
@@ -43,6 +29,9 @@ const StudyList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [kvWarning, setKvWarning] = useState<string | null>(null);
+  const [loadingDemo, setLoadingDemo] = useState(false);
+  const [demoMessage, setDemoMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     loadStudies();
@@ -51,8 +40,9 @@ const StudyList: React.FC = () => {
   const loadStudies = async () => {
     setLoading(true);
     try {
-      const data = await getAllStudies();
+      const { studies: data, warning } = await getAllStudies();
       setStudies(data);
+      setKvWarning(warning || null);
     } catch (error) {
       console.error('Error loading studies:', error);
     } finally {
@@ -90,6 +80,56 @@ const StudyList: React.FC = () => {
       console.error('Logout error:', error);
     }
   };
+
+  const handleLoadDemo = async () => {
+    setLoadingDemo(true);
+    setDemoMessage(null);
+    try {
+      const response = await fetch('/api/demo/seed', { method: 'POST' });
+      const data = await response.json();
+
+      if (response.ok) {
+        setDemoMessage({
+          type: 'success',
+          text: `Demo data loaded: ${data.data.studiesSeeded} study, ${data.data.interviewsSeeded} interviews`
+        });
+        await loadStudies(); // Refresh the list
+      } else {
+        setDemoMessage({ type: 'error', text: data.error || 'Failed to load demo data' });
+      }
+    } catch (error) {
+      console.error('Error loading demo:', error);
+      setDemoMessage({ type: 'error', text: 'Failed to load demo data' });
+    } finally {
+      setLoadingDemo(false);
+    }
+  };
+
+  const handleClearDemo = async () => {
+    if (!confirm('Are you sure you want to clear all demo data?')) return;
+
+    setLoadingDemo(true);
+    setDemoMessage(null);
+    try {
+      const response = await fetch('/api/demo/seed', { method: 'DELETE' });
+      const data = await response.json();
+
+      if (response.ok) {
+        setDemoMessage({ type: 'success', text: 'Demo data cleared' });
+        await loadStudies(); // Refresh the list
+      } else {
+        setDemoMessage({ type: 'error', text: data.error || 'Failed to clear demo data' });
+      }
+    } catch (error) {
+      console.error('Error clearing demo:', error);
+      setDemoMessage({ type: 'error', text: 'Failed to clear demo data' });
+    } finally {
+      setLoadingDemo(false);
+    }
+  };
+
+  // Check if demo data exists
+  const hasDemoData = studies.some(s => s.id.startsWith('demo-'));
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
@@ -136,6 +176,25 @@ const StudyList: React.FC = () => {
                 <Users size={16} />
                 All Interviews
               </button>
+              {hasDemoData ? (
+                <button
+                  onClick={handleClearDemo}
+                  disabled={loadingDemo}
+                  className="px-4 py-2 text-sm border border-amber-700/50 text-amber-400 hover:bg-amber-900/30 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {loadingDemo ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
+                  Clear Demo
+                </button>
+              ) : (
+                <button
+                  onClick={handleLoadDemo}
+                  disabled={loadingDemo || !!kvWarning}
+                  className="px-4 py-2 text-sm border border-purple-700/50 text-purple-400 hover:bg-purple-900/30 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {loadingDemo ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  Load Demo
+                </button>
+              )}
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm border border-stone-600 text-stone-400 hover:bg-stone-700 rounded-xl transition-colors flex items-center gap-2"
@@ -146,6 +205,52 @@ const StudyList: React.FC = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* KV Warning Banner */}
+        {kvWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-amber-900/30 border border-amber-700/50 rounded-xl p-4 flex items-start gap-3"
+          >
+            <AlertTriangle size={20} className="text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-medium text-amber-300 mb-1">Storage Not Configured</h4>
+              <p className="text-sm text-amber-400/80">{kvWarning}</p>
+              <p className="text-sm text-amber-400/60 mt-2">
+                See the README for setup instructions using Vercel KV (Upstash Redis).
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Demo Message Banner */}
+        {demoMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-6 rounded-xl p-4 flex items-center gap-3 ${
+              demoMessage.type === 'success'
+                ? 'bg-green-900/30 border border-green-700/50'
+                : 'bg-red-900/30 border border-red-700/50'
+            }`}
+          >
+            {demoMessage.type === 'success' ? (
+              <Sparkles size={20} className="text-green-400 flex-shrink-0" />
+            ) : (
+              <AlertTriangle size={20} className="text-red-400 flex-shrink-0" />
+            )}
+            <p className={`text-sm ${demoMessage.type === 'success' ? 'text-green-300' : 'text-red-300'}`}>
+              {demoMessage.text}
+            </p>
+            <button
+              onClick={() => setDemoMessage(null)}
+              className="ml-auto text-stone-500 hover:text-stone-300"
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
 
         {/* Content */}
         {loading ? (
@@ -163,15 +268,36 @@ const StudyList: React.FC = () => {
             </div>
             <h2 className="text-xl font-semibold text-white mb-2">No Studies Yet</h2>
             <p className="text-stone-400 mb-6">
-              Create your first study to start collecting interview data.
+              Create your first study or load demo data to explore the platform.
             </p>
-            <button
-              onClick={() => router.push('/setup')}
-              className="px-6 py-3 bg-stone-600 hover:bg-stone-500 text-white rounded-xl transition-colors flex items-center gap-2 mx-auto"
-            >
-              <Plus size={18} />
-              Create Your First Study
-            </button>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={() => router.push('/setup')}
+                className="px-6 py-3 bg-stone-600 hover:bg-stone-500 text-white rounded-xl transition-colors flex items-center gap-2"
+              >
+                <Plus size={18} />
+                Create Study
+              </button>
+              {!kvWarning && (
+                <button
+                  onClick={handleLoadDemo}
+                  disabled={loadingDemo}
+                  className="px-6 py-3 border border-purple-700/50 text-purple-400 hover:bg-purple-900/30 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {loadingDemo ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={18} />
+                  )}
+                  Load Demo Data
+                </button>
+              )}
+            </div>
+            {!kvWarning && (
+              <p className="text-stone-500 text-sm mt-4">
+                Demo includes a sample study with 3 completed interviews and AI analysis
+              </p>
+            )}
           </motion.div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -181,7 +307,7 @@ const StudyList: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className={`bg-gradient-to-br ${getStudyGradient(study.config.topicAreas)} rounded-xl border border-stone-700 p-6 hover:border-stone-500 transition-colors relative`}
+                className="bg-stone-800/50 rounded-xl border border-stone-700 p-6 hover:border-stone-500 transition-colors relative"
               >
                 {/* Menu button */}
                 <div className="absolute top-4 right-4">

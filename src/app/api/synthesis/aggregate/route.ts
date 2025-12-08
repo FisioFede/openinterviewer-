@@ -2,6 +2,8 @@
 // Server-side only - requires authenticated session
 // Analyzes all interviews for a study to find cross-participant patterns
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getInterviewProvider } from '@/lib/providers';

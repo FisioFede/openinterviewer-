@@ -2,6 +2,8 @@
 // Creates a stateless URL that embeds the study configuration
 // Requires admin authentication to prevent unauthorized link generation
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';

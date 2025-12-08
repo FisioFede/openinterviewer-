@@ -3,6 +3,8 @@
 // DELETE /api/studies/[id] - Delete study (fails if has interviews)
 // Protected: Requires authenticated session
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getStudy, saveStudy, deleteStudy, isKVAvailable } from '@/lib/kv';
 import { cookies } from 'next/headers';
