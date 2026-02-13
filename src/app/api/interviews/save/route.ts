@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     }
 
     // Save the interview
-    const success = await saveInterview(interview);
+    const { success, isNew } = await saveInterview(interview);
 
     if (!success) {
       return NextResponse.json(
@@ -115,7 +115,9 @@ export async function POST(request: Request) {
     // Update study metadata (increment count and lock if first interview)
     // These operations are non-critical - don't fail the request if they fail
     try {
-      await incrementStudyInterviewCount(interview.studyId);
+      if (isNew) {
+        await incrementStudyInterviewCount(interview.studyId);
+      }
       await lockStudy(interview.studyId);
     } catch (studyUpdateError) {
       // Log but don't fail - study may not exist in KV (legacy/token-only studies)

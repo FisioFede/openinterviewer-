@@ -20,8 +20,21 @@ export {
   formatProfileFields
 } from './prompts';
 
-// Provider interface for interview AI
+/**
+ * Interface that all AI providers (Gemini, Claude, etc.) must implement.
+ * This standardizes the interaction between the application and different LLMs.
+ */
 export interface AIProvider {
+  /**
+   * Generates a response from the AI interviewer.
+   * 
+   * @param history - The full history of the interview conversation.
+   * @param studyConfig - The configuration/script for the study.
+   * @param participantProfile - The current known details about the participant.
+   * @param questionProgress - Tracks which questions have been asked/answered.
+   * @param currentContext - Any additional context or system instructions.
+   * @returns Promise resolving to the AI's structured response (message + state updates).
+   */
   generateInterviewResponse(
     history: InterviewMessage[],
     studyConfig: StudyConfig,
@@ -30,8 +43,23 @@ export interface AIProvider {
     currentContext: string
   ): Promise<AIInterviewResponse>;
 
+  /**
+   * Generates the initial greeting message for the interview.
+   * 
+   * @param studyConfig - The study configuration.
+   * @returns Promise resolving to the greeting string.
+   */
   getInterviewGreeting(studyConfig: StudyConfig): Promise<string>;
 
+  /**
+   * Analyzes a completed interview to produce a synthesis of findings.
+   * 
+   * @param history - The full interview transcript.
+   * @param studyConfig - The study configuration.
+   * @param behaviorData - Metadata about the interview (timing, topics, etc.).
+   * @param participantProfile - The collected participant profile.
+   * @returns Promise resolving to the structured synthesis result.
+   */
   synthesizeInterview(
     history: InterviewMessage[],
     studyConfig: StudyConfig,
@@ -39,12 +67,27 @@ export interface AIProvider {
     participantProfile: ParticipantProfile | null
   ): Promise<SynthesisResult>;
 
+  /**
+   * Aggregates findings across multiple interviews to find common themes.
+   * 
+   * @param studyConfig - The study configuration.
+   * @param syntheses - A list of synthesis results from individual interviews.
+   * @param interviewCount - The total number of interviews included.
+   * @returns Promise resolving to the aggregate synthesis result.
+   */
   synthesizeAggregate(
     studyConfig: StudyConfig,
     syntheses: SynthesisResult[],
     interviewCount: number
   ): Promise<Omit<AggregateSynthesisResult, 'studyId' | 'interviewCount' | 'generatedAt'>>;
 
+  /**
+   * Generates a proposal for a follow-up study based on aggregate findings.
+   * 
+   * @param parentConfig - The configuration of the current/parent study.
+   * @param synthesis - The aggregate findings from the current study.
+   * @returns Promise resolving to the new study parameters.
+   */
   generateFollowupStudy(
     parentConfig: StudyConfig,
     synthesis: AggregateSynthesisResult
@@ -135,7 +178,12 @@ export const synthesisResponseSchema = {
   required: ['statedPreferences', 'revealedPreferences', 'themes', 'keyInsights', 'bottomLine']
 };
 
-// Clean JSON from AI response
+/**
+ * Cleans JSON output from LLMs by removing Markdown code blocks and finding the JSON object.
+ * 
+ * @param text - The raw text response from the LLM.
+ * @returns A clean JSON string (hopefully).
+ */
 export const cleanJSON = (text: string): string => {
   if (!text) return '{}';
   let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();

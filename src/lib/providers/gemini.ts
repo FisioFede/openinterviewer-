@@ -230,10 +230,11 @@ export class GeminiProvider implements AIProvider {
         }
       });
 
-      return JSON.parse(cleanJSON(response.text || '{}')) as SynthesisResult;
+      const parsed = JSON.parse(cleanJSON(response.text || '{}'));
+      return { ...defaultSynthesisResult, ...parsed };
     } catch (error) {
       console.error('Gemini synthesis error:', error);
-      return defaultSynthesisResult;
+      throw error;
     }
   }
 

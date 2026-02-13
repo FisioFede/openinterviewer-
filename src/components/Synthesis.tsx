@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store';
 import { synthesizeInterview } from '@/services/geminiService';
@@ -22,6 +22,7 @@ import {
 
 const Synthesis: React.FC = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const {
     studyConfig,
     participantProfile,
@@ -140,12 +141,16 @@ const Synthesis: React.FC = () => {
 
   const handleBack = () => {
     setStep('interview');
-    router.push('/interview');
+    if (!pathname?.startsWith('/p/')) {
+      router.push('/interview');
+    }
   };
 
   const handleExport = () => {
     setStep('export');
-    router.push('/export');
+    if (!pathname?.startsWith('/p/')) {
+      router.push('/export');
+    }
   };
 
   if (!studyConfig) {

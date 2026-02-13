@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { StoredInterview } from '@/types';
-import { getInterview } from '@/services/storageService';
+import { getInterview, saveCompletedInterview } from '@/services/storageService';
+import { synthesizeInterview } from '@/services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import {
   Loader2,
@@ -17,8 +18,10 @@ import {
   Target,
   TrendingUp,
   Lightbulb,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles
 } from 'lucide-react';
+import { useStore } from '@/store';
 
 interface InterviewDetailProps {
   interviewId: string;
@@ -29,6 +32,17 @@ const InterviewDetail: React.FC<InterviewDetailProps> = ({ interviewId }) => {
   const [interview, setInterview] = useState<StoredInterview | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'transcript' | 'analysis'>('transcript');
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
+  const { studyConfig } = useStore(); // We need study config context if possible, but interview has studyName.
+  // Actually we need the full study config for synthesis.
+  // The interview object only has studyId and studyName.
+  // We should fetch the full study config or rely on what's in the store if it matches?
+  // Ideally, the synthesis service needs the config.
+  // For now, let's try to fetch the study config from the store or by ID?
+  // The getInterview returns StoredInterview.
+  // synthesizeInterview needs StudyConfig.
+  // We can fetch the study by ID.
+  const [currentStudyConfig, setCurrentStudyConfig] = useState<any>(null); // Using any to avoid complex type reconstruction here if not needed
 
   useEffect(() => {
     loadInterview();
@@ -39,6 +53,15 @@ const InterviewDetail: React.FC<InterviewDetailProps> = ({ interviewId }) => {
     try {
       const data = await getInterview(interviewId);
       setInterview(data);
+
+      // Also try to load the study config if we can
+      if (data?.studyId) {
+        // We can't easily import getStudy from storageService if it's not exported or if we are client side...
+        // Wait, getStudy IS exported in storageService.
+        const { getStudy } = await import('@/services/storageService');
+        const study = await getStudy(data.studyId);
+        setCurrentStudyConfig(study ? study.config : null);
+      }
     } catch (error) {
       console.error('Error loading interview:', error);
     } finally {
@@ -103,6 +126,44 @@ const InterviewDetail: React.FC<InterviewDetailProps> = ({ interviewId }) => {
     a.download = `transcript-${interview.id}.md`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleGenerateAnalysis = async () => {
+    if (!interview || !currentStudyConfig) return;
+
+    setIsGeneratingAnalysis(true);
+    try {
+      const result = await synthesizeInterview(
+        interview.transcript,
+        currentStudyConfig,
+        interview.behaviorData,
+        interview.participantProfile
+      );
+
+      // Update local state
+      const updatedInterview = {
+        ...interview,
+        synthesis: result
+      };
+      setInterview(updatedInterview);
+
+      // Save to storage
+      await saveCompletedInterview({
+        id: interview.id,
+        studyId: interview.studyId,
+        studyName: interview.studyName,
+        participantProfile: interview.participantProfile,
+        transcript: interview.transcript,
+        synthesis: result,
+        behaviorData: interview.behaviorData,
+        createdAt: interview.createdAt
+      });
+    } catch (error) {
+      console.error("Error generating analysis:", error);
+      alert("Failed to generate analysis. Please try again.");
+    } finally {
+      setIsGeneratingAnalysis(false);
+    }
   };
 
   const formatDuration = (start: number, end: number) => {
@@ -222,21 +283,19 @@ const InterviewDetail: React.FC<InterviewDetailProps> = ({ interviewId }) => {
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setActiveTab('transcript')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'transcript'
-                ? 'bg-stone-700 text-white'
-                : 'text-stone-400 hover:text-stone-300'
-            }`}
+            className={`px-4 py-2 rounded-lg transition-colors ${activeTab === 'transcript'
+              ? 'bg-stone-700 text-white'
+              : 'text-stone-400 hover:text-stone-300'
+              }`}
           >
             Transcript
           </button>
           <button
             onClick={() => setActiveTab('analysis')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'analysis'
-                ? 'bg-stone-700 text-white'
-                : 'text-stone-400 hover:text-stone-300'
-            }`}
+            className={`px-4 py-2 rounded-lg transition-colors ${activeTab === 'analysis'
+              ? 'bg-stone-700 text-white'
+              : 'text-stone-400 hover:text-stone-300'
+              }`}
           >
             Analysis
           </button>
@@ -256,11 +315,10 @@ const InterviewDetail: React.FC<InterviewDetailProps> = ({ interviewId }) => {
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl p-4 ${
-                      msg.role === 'user'
-                        ? 'bg-stone-700 text-white rounded-br-md'
-                        : 'bg-stone-800 border border-stone-700 text-stone-100 rounded-bl-md'
-                    }`}
+                    className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user'
+                      ? 'bg-stone-700 text-white rounded-br-md'
+                      : 'bg-stone-800 border border-stone-700 text-stone-100 rounded-bl-md'
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-2 text-xs text-stone-500">
                       {msg.role === 'ai' ? (
@@ -292,7 +350,7 @@ const InterviewDetail: React.FC<InterviewDetailProps> = ({ interviewId }) => {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            {interview.synthesis ? (
+            {interview.synthesis && interview.synthesis.bottomLine !== 'Interview synthesis in progress.' ? (
               <>
                 {/* Key Insight */}
                 <div className="bg-stone-700 text-white rounded-xl p-6">
@@ -367,14 +425,14 @@ const InterviewDetail: React.FC<InterviewDetailProps> = ({ interviewId }) => {
                 </div>
 
                 {/* Contradictions */}
-                {interview.synthesis.contradictions.length > 0 && (
+                {interview.synthesis.contradictions?.length > 0 && (
                   <div className="bg-stone-800 border border-stone-600 rounded-xl p-6">
                     <h3 className="font-semibold text-stone-200 mb-3 flex items-center gap-2">
                       <AlertTriangle size={18} className="text-stone-400" />
                       Potential Contradictions
                     </h3>
                     <ul className="space-y-2">
-                      {interview.synthesis.contradictions.map((c, i) => (
+                      {(interview.synthesis.contradictions || []).map((c, i) => (
                         <li key={i} className="text-stone-300 text-sm">
                           {c}
                         </li>
@@ -400,9 +458,25 @@ const InterviewDetail: React.FC<InterviewDetailProps> = ({ interviewId }) => {
               </>
             ) : (
               <div className="bg-stone-800/50 rounded-xl border border-stone-700 p-12 text-center">
-                <p className="text-stone-400">
-                  No analysis available for this interview.
+                <p className="text-stone-400 mb-4">
+                  {interview.synthesis && interview.synthesis.bottomLine === 'Interview synthesis in progress.'
+                    ? "Previous analysis attempt was incomplete."
+                    : "No analysis available for this interview."}
                 </p>
+                {currentStudyConfig ? (
+                  <button
+                    onClick={handleGenerateAnalysis}
+                    disabled={isGeneratingAnalysis}
+                    className="px-6 py-3 bg-stone-600 hover:bg-stone-500 text-white font-medium rounded-xl transition-colors flex items-center gap-2 mx-auto disabled:opacity-50"
+                  >
+                    {isGeneratingAnalysis ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                    {isGeneratingAnalysis ? "Generating..." : "Generate Analysis"}
+                  </button>
+                ) : (
+                  <p className="text-xs text-stone-500">
+                    Cannot generate analysis: Study configuration not found.
+                  </p>
+                )}
               </div>
             )}
           </motion.div>

@@ -21,6 +21,7 @@ export default function ParticipantPage() {
     setStudyConfig,
     setViewMode,
     setParticipantToken,
+    setParticipantNickname,
     studyConfig
   } = useStore();
 
@@ -49,9 +50,20 @@ export default function ParticipantPage() {
 
         const tokenData = result.data as ParticipantToken;
 
+        // Check if we're switching participants - if so, reset the session
+        // We use getState() to get the most current stored value
+        const currentStoredToken = useStore.getState().participantToken;
+        if (currentStoredToken && currentStoredToken !== token) {
+          console.log('Switching participants, resetting session');
+          useStore.getState().resetParticipant();
+        }
+
         // Set the study config from token
         setStudyConfig(tokenData.studyConfig);
         setParticipantToken(token);
+        if (tokenData.nickname) {
+          setParticipantNickname(tokenData.nickname);
+        }
         setViewMode('participant');
         setStep('consent');
         setLoading(false);

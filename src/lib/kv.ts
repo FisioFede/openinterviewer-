@@ -2,11 +2,13 @@
 // Auto-provisioned during Vercel deployment
 
 import { kv } from '@vercel/kv';
-import { StoredInterview, StoredStudy } from '@/types';
+import { StoredInterview, StoredStudy, StoredLink } from '@/types';
 
 // Key prefixes for organizing data
 const INTERVIEW_PREFIX = 'interview:';
 const STUDY_INDEX_PREFIX = 'study-interviews:';
+const LINK_PREFIX = 'link:';
+const STUDY_LINKS_PREFIX = 'study-links:';
 const STUDY_PREFIX = 'study:';
 const ALL_STUDIES_KEY = 'all-studies';
 
@@ -21,8 +23,13 @@ export async function getInterview(id: string): Promise<StoredInterview | null> 
 }
 
 // Save interview (create or update)
-export async function saveInterview(interview: StoredInterview): Promise<boolean> {
+// Returns { success: boolean, isNew: boolean }
+export async function saveInterview(interview: StoredInterview): Promise<{ success: boolean; isNew: boolean }> {
   try {
+    // Check if it's new
+    const exists = await kv.exists(`${INTERVIEW_PREFIX}${interview.id}`);
+    const isNew = exists === 0;
+
     // Save the interview
     await kv.set(`${INTERVIEW_PREFIX}${interview.id}`, interview);
 
@@ -32,10 +39,10 @@ export async function saveInterview(interview: StoredInterview): Promise<boolean
     // Add to global index
     await kv.sadd('all-interviews', interview.id);
 
-    return true;
+    return { success: true, isNew };
   } catch (error) {
     console.error('Error saving interview:', error);
-    return false;
+    return { success: false, isNew: false };
   }
 }
 
@@ -97,6 +104,45 @@ export async function isKVAvailable(): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+// ============================================
+// Link Storage Functions
+// ============================================
+
+// Save generated link
+export async function saveLink(link: StoredLink): Promise<boolean> {
+  try {
+    // Save link metadata (keyed by token for lookup, though token is long)
+    // Better to just store in a list for the study?
+    // We only need to list them, we don't need to look up by ID usually (token verification handles itself)
+    // But let's store it properly
+    await kv.set(`${LINK_PREFIX}${link.token}`, link);
+    await kv.sadd(`${STUDY_LINKS_PREFIX}${link.studyId}`, link.token);
+    return true;
+  } catch (error) {
+    console.error('Error saving link:', error);
+    return false;
+  }
+}
+
+// Get links for a study
+export async function getStudyLinks(studyId: string): Promise<StoredLink[]> {
+  try {
+    const tokens = await kv.smembers(`${STUDY_LINKS_PREFIX}${studyId}`);
+    if (!tokens || tokens.length === 0) return [];
+
+    const links = await Promise.all(
+      tokens.map(token => kv.get<StoredLink>(`${LINK_PREFIX}${token}`))
+    );
+
+    return links
+      .filter((l): l is StoredLink => l !== null)
+      .sort((a, b) => b.createdAt - a.createdAt);
+  } catch (error) {
+    console.error('Error getting study links:', error);
+    return [];
   }
 }
 
@@ -174,6 +220,21 @@ export async function incrementStudyInterviewCount(studyId: string): Promise<boo
     return await saveStudy(study);
   } catch (error) {
     console.error('Error incrementing study interview count:', error);
+    return false;
+  }
+}
+
+// Increment link count for a study
+export async function incrementStudyLinkCount(studyId: string): Promise<boolean> {
+  try {
+    const study = await getStudy(studyId);
+    if (!study) return false;
+
+    study.linkCount = (study.linkCount || 0) + 1;
+    study.updatedAt = Date.now();
+    return await saveStudy(study);
+  } catch (error) {
+    console.error('Error incrementing study link count:', error);
     return false;
   }
 }

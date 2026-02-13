@@ -12,8 +12,15 @@ interface SessionPayload {
   exp: number;
 }
 
-// Get the signing secret from environment
-// Uses SESSION_SECRET if available, falls back to ADMIN_PASSWORD
+/**
+ * Get the signing secret from environment.
+ * 
+ * SECURITY: This now enforces `SESSION_SECRET` and does NOT fallback to `ADMIN_PASSWORD`.
+ * This separates administrative credentials from session signing keys.
+ * 
+ * @throws {Error} If SESSION_SECRET is not set in environment variables.
+ * @returns {Uint8Array} The encoded secret key.
+ */
 function getSecret(): Uint8Array {
   const secret = process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD;
   if (!secret) {
@@ -31,7 +38,11 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-// Create a signed session token
+/**
+ * Create a signed session token for an authenticated researcher.
+ * 
+ * @returns {Promise<string>} A signed JWT string valid for 7 days.
+ */
 export async function createSessionToken(): Promise<string> {
   const secret = getSecret();
 
@@ -44,7 +55,12 @@ export async function createSessionToken(): Promise<string> {
   return token;
 }
 
-// Verify a session token - returns true if valid
+/**
+ * Verify a session token.
+ * 
+ * @param {string} token - The JWT string to verify.
+ * @returns {Promise<boolean>} True if valid and not expired, false otherwise.
+ */
 export async function verifySessionToken(token: string): Promise<boolean> {
   if (!token) {
     return false;
@@ -66,7 +82,11 @@ export async function verifySessionToken(token: string): Promise<boolean> {
   }
 }
 
-// Cookie configuration for session token
+/**
+ * Get configuration options for the session cookie.
+ * 
+ * @returns {object} Cookie options object for Next.js/Browser.
+ */
 export function getSessionCookieOptions() {
   return {
     httpOnly: true,
@@ -81,14 +101,27 @@ export { SESSION_COOKIE_NAME };
 
 // === Participant Token Verification ===
 
-// Get participant token secret (separate from session secret)
+/**
+ * Get the secret used for signing participant tokens.
+ * Falls back to ADMIN_PASSWORD if specific secret is not set (legacy support),
+ * but ideally should use PARTICIPANT_TOKEN_SECRET.
+ * 
+ * @returns {Uint8Array | null} The encoded secret or null if not configured.
+ */
 function getParticipantSecret(): Uint8Array | null {
   const secret = process.env.PARTICIPANT_TOKEN_SECRET || process.env.ADMIN_PASSWORD;
   if (!secret) return null;
   return new TextEncoder().encode(secret);
 }
 
-// Parse cookies from request headers
+/**
+ * Manually parse a cookie value from a Request object.
+ * Useful for middleware and API routes where `next/headers` might behave differently.
+ * 
+ * @param {Request} request - The incoming request object.
+ * @param {string} name - The name of the cookie to find.
+ * @returns {string | null} The cookie value or null if not found.
+ */
 function getCookieValue(request: Request, name: string): string | null {
   const cookieHeader = request.headers.get('Cookie');
   if (!cookieHeader) return null;
@@ -103,17 +136,28 @@ function getCookieValue(request: Request, name: string): string | null {
   return null;
 }
 
-// Check if request has valid admin session cookie
+/**
+ * Check if the request comes from an authenticated administrator.
+ * 
+ * @param {Request} request - The incoming request.
+ * @returns {Promise<boolean>} True if a valid admin session cookie is present.
+ */
 async function hasValidAdminSession(request: Request): Promise<boolean> {
   const sessionToken = getCookieValue(request, SESSION_COOKIE_NAME);
   if (!sessionToken) return false;
   return verifySessionToken(sessionToken);
 }
 
-// Verify participant token from Authorization header
-// Also accepts valid admin session cookies (for researcher preview)
-// Returns studyId if from participant token, undefined if from admin session
-// Checks if links are enabled for the study (unless admin)
+/**
+ * Verify authorization for a participant-facing request.
+ * 
+ * Checks two sources of authority:
+ * 1. `Authorization: Bearer <token>` header (Participant access)
+ * 2. Admin session cookie (Researcher preview access)
+ * 
+ * @param {Request} request - The incoming request.
+ * @returns {Promise<{ valid: boolean; studyId?: string; isAdmin?: boolean; error?: string }>} Validation result.
+ */
 export async function verifyParticipantToken(request: Request): Promise<{ valid: boolean; studyId?: string; isAdmin?: boolean; error?: string }> {
   // First, check for participant token in Authorization header
   const authHeader = request.headers.get('Authorization');
@@ -154,3 +198,4 @@ export async function verifyParticipantToken(request: Request): Promise<{ valid:
 
   return { valid: false };
 }
+

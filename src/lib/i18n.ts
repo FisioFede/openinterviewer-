@@ -36,6 +36,10 @@ export const translations = {
         completeText: "Your responses have been saved. Thank you for participating.",
         viewAnalysis: "View Analysis",
         errorResponse: "I appreciate you sharing that. Could you tell me more?",
+        savingInterview: "Saving your interview...",
+        safeToClose: "You may now safely close this page.",
+        interviewSaved: "Interview saved.",
+        generateAnalysis: "Generate Analysis",
     },
     jp: {
         // Consent
@@ -72,6 +76,10 @@ export const translations = {
         completeText: "回答が保存されました。ご参加ありがとうございました。",
         viewAnalysis: "分析を見る",
         errorResponse: "共有していただきありがとうございます。もう少し詳しく教えていただけますか？",
+        savingInterview: "インタビューを保存中...",
+        safeToClose: "このページを閉じても安全です。",
+        interviewSaved: "インタビューが保存されました。",
+        generateAnalysis: "分析を生成",
     }
 };
 

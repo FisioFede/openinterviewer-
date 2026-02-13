@@ -229,11 +229,10 @@ const StudyList: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mb-6 rounded-xl p-4 flex items-center gap-3 ${
-              demoMessage.type === 'success'
-                ? 'bg-green-900/30 border border-green-700/50'
-                : 'bg-red-900/30 border border-red-700/50'
-            }`}
+            className={`mb-6 rounded-xl p-4 flex items-center gap-3 ${demoMessage.type === 'success'
+              ? 'bg-green-900/30 border border-green-700/50'
+              : 'bg-red-900/30 border border-red-700/50'
+              }`}
           >
             {demoMessage.type === 'success' ? (
               <Sparkles size={20} className="text-green-400 flex-shrink-0" />
@@ -332,11 +331,13 @@ const StudyList: React.FC = () => {
                       <button
                         onClick={() => {
                           // Store study config in sessionStorage for setup page
-                          sessionStorage.setItem('prefillStudyConfig', JSON.stringify(study.config));
-                          router.push(`/setup?prefill=edit&studyId=${study.id}`);
+                          if (study.config) {
+                            sessionStorage.setItem('prefillStudyConfig', JSON.stringify(study.config));
+                            router.push(`/setup?prefill=edit&studyId=${study.id}`);
+                          }
                           setMenuOpenId(null);
                         }}
-                        disabled={study.isLocked}
+                        disabled={study.isLocked || !study.config}
                         className="w-full px-4 py-2 text-left text-sm text-stone-300 hover:bg-stone-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <LinkIcon size={14} />
@@ -366,9 +367,9 @@ const StudyList: React.FC = () => {
                   <div className="flex items-start gap-3 mb-3 pr-8">
                     <div className="flex-1">
                       <h3 className="font-semibold text-white text-lg mb-1">
-                        {study.config.name}
+                        {study.config?.name || 'Untitled Study (Corrupted)'}
                       </h3>
-                      {study.config.description && (
+                      {study.config?.description && (
                         <p className="text-sm text-stone-400 line-clamp-2">
                           {study.config.description}
                         </p>
@@ -380,7 +381,9 @@ const StudyList: React.FC = () => {
                   <div className="flex items-center gap-4 text-sm text-stone-500 mb-3">
                     <div className="flex items-center gap-1">
                       <Users size={14} />
-                      <span>{study.interviewCount} interviews</span>
+                      <span>
+                        {Math.max(study.linkCount || 0, study.interviewCount)} interviews ({study.interviewCount} completed)
+                      </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar size={14} />
@@ -390,16 +393,15 @@ const StudyList: React.FC = () => {
 
                   {/* Status badges */}
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${
-                      study.isLocked
-                        ? 'bg-stone-700 text-stone-400'
-                        : 'bg-green-900/50 text-green-400'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${study.isLocked
+                      ? 'bg-stone-700 text-stone-400'
+                      : 'bg-green-900/50 text-green-400'
+                      }`}>
                       {study.isLocked ? <Lock size={10} /> : <Unlock size={10} />}
                       {study.isLocked ? 'Locked' : 'Editable'}
                     </span>
                     <span className="px-2 py-1 text-xs rounded-full bg-stone-700 text-stone-400">
-                      {study.config.coreQuestions.length} questions
+                      {study.config?.coreQuestions?.length || 0} questions
                     </span>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store';
 import { Shield, ArrowRight, ArrowLeft, MessageSquare, Clock, HelpCircle } from 'lucide-react';
@@ -9,6 +9,7 @@ import { getTexts } from '@/lib/i18n';
 
 const Consent: React.FC = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const { studyConfig, giveConsent, setStep, viewMode, initializeProfile } = useStore();
   const t = getTexts(studyConfig);
 
@@ -20,7 +21,11 @@ const Consent: React.FC = () => {
     }
     // Skip directly to interview (merged intake/profile into conversation)
     setStep('interview');
-    router.push('/interview');
+
+    // Only navigate if we're not in the participant route (preserving /p/[token])
+    if (!pathname?.startsWith('/p/')) {
+      router.push('/interview');
+    }
   };
 
   const handleBack = () => {

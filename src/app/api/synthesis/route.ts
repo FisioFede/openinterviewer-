@@ -17,6 +17,10 @@ const MAX_HISTORY_MESSAGES = 200; // Higher for synthesis - needs full interview
 const MAX_CONTEXT_LENGTH = 10000;
 const MAX_MESSAGE_LENGTH = 5000;
 
+// Allow for longer processing times (up to 5 minutes)
+export const maxDuration = 300;
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     // Verify participant token

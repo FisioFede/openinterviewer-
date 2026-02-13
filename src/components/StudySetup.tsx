@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store';
 import { generateParticipantLink } from '@/services/geminiService';
-import { StudyConfig, ProfileField, AIBehavior, AIProviderType, LinkExpirationOption, GEMINI_MODELS, CLAUDE_MODELS, DEFAULT_GEMINI_MODEL, DEFAULT_CLAUDE_MODEL } from '@/types';
+import { StudyConfig, ProfileField, AIBehavior, AIProviderType, LinkExpirationOption, InterviewerTone, GEMINI_MODELS, CLAUDE_MODELS, DEFAULT_GEMINI_MODEL, DEFAULT_CLAUDE_MODEL } from '@/types';
 import {
   FileText,
   Plus,
@@ -29,6 +29,7 @@ import {
   Clock,
   AlertTriangle,
   ExternalLink,
+  Settings,
   Globe
 } from 'lucide-react';
 
@@ -44,7 +45,7 @@ const PROFILE_PRESETS: ProfileField[] = [
 const StudySetup: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setStudyConfig, setStep, studyConfig, loadExampleStudy, setViewMode, setParticipantToken } = useStore();
+  const { setStudyConfig, setStep, studyConfig, loadExampleStudy, setViewMode, setParticipantToken, reset } = useStore();
 
   // Follow-up study state
   const [parentStudyInfo, setParentStudyInfo] = useState<{ id: string; name: string } | null>(null);
@@ -63,6 +64,9 @@ const StudySetup: React.FC = () => {
   );
   const [aiBehavior, setAiBehavior] = useState<AIBehavior>(
     studyConfig?.aiBehavior || 'standard'
+  );
+  const [tone, setTone] = useState<InterviewerTone>(
+    studyConfig?.tone || 'neutral'
   );
   const [aiProvider, setAiProvider] = useState<AIProviderType>(
     studyConfig?.aiProvider || 'gemini'
@@ -200,6 +204,28 @@ const StudySetup: React.FC = () => {
           console.error('Error parsing prefill config:', error);
         }
       }
+    } else {
+      // New study mode - clear any existing config
+      reset();
+      setSavedStudyId(null);
+
+      // Reset form fields
+      setName('');
+      setDescription('');
+      setResearchQuestion('');
+      setCoreQuestions(['']);
+      setTopicAreas(['']);
+      setProfileSchema([]);
+      setAiBehavior('standard');
+      setAiProvider('gemini');
+      setAiModel(DEFAULT_GEMINI_MODEL);
+      setEnableReasoning(undefined);
+      setLinkExpiration('never');
+      setConsentText('Thank you for participating in this research study. Your responses will be used to understand [research topic]. You may stop at any time. Do you consent to participate?');
+      setLanguage('jp');
+
+      setIsDirty(false);
+      setParentStudyInfo(null);
     }
   }, [searchParams]);
 
@@ -213,6 +239,7 @@ const StudySetup: React.FC = () => {
       setTopicAreas(studyConfig.topicAreas.length > 0 ? studyConfig.topicAreas : ['']);
       setProfileSchema(studyConfig.profileSchema || []);
       setAiBehavior(studyConfig.aiBehavior);
+      setTone(studyConfig.tone || 'neutral');
       setAiProvider(studyConfig.aiProvider || 'gemini');
       setAiModel(studyConfig.aiModel || (studyConfig.aiProvider === 'claude' ? DEFAULT_CLAUDE_MODEL : DEFAULT_GEMINI_MODEL));
       setEnableReasoning(studyConfig.enableReasoning);
@@ -299,6 +326,7 @@ const StudySetup: React.FC = () => {
     topicAreas: topicAreas.filter(t => t.trim()),
     profileSchema: profileSchema.filter(f => f.label.trim()),
     aiBehavior,
+    tone,
     aiProvider,
     aiModel,
     enableReasoning,
@@ -497,6 +525,14 @@ const StudySetup: React.FC = () => {
       label: 'Focus on uncovering new insights (Exploratory)',
       desc: 'Prioritize depth. Chase interesting threads, probe emotions.'
     }
+  ];
+
+  const toneOptions: { id: InterviewerTone; label: string; desc: string }[] = [
+    { id: 'formal', label: 'Formal', desc: 'Cold, objective, distant' },
+    { id: 'professional', label: 'Professional', desc: 'Polite, business-like' },
+    { id: 'neutral', label: 'Neutral', desc: 'Conversational (Default)' },
+    { id: 'friendly', label: 'Friendly', desc: 'Warm, engaging' },
+    { id: 'extremely_friendly', label: 'Bestie', desc: 'Very enthusiastic, close friend' }
   ];
 
   const providerOptions: { id: AIProviderType; label: string; desc: string }[] = [
@@ -986,31 +1022,73 @@ const StudySetup: React.FC = () => {
             )}
           </div>
 
-          {/* AI Behavior */}
-          <div className="space-y-4">
-            <h2 className="font-semibold text-lg text-stone-100">AI Interview Style</h2>
-            <div className="space-y-2">
-              {behaviorOptions.map((option) => (
-                <label
-                  key={option.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${aiBehavior === option.id
-                    ? 'border-stone-500 bg-stone-700'
-                    : 'border-stone-700 hover:border-stone-600'
-                    }`}
-                >
-                  <input
-                    type="radio"
-                    name="aiBehavior"
-                    checked={aiBehavior === option.id}
-                    onChange={() => { setAiBehavior(option.id); setIsDirty(true); }}
-                    className="mt-1 accent-stone-500"
-                  />
-                  <div>
-                    <div className="font-medium text-stone-100">{option.label}</div>
-                    <div className="text-xs text-stone-400">{option.desc}</div>
-                  </div>
-                </label>
-              ))}
+          {/* AI Settings */}
+          <div className="space-y-4 pt-4 border-t border-stone-700">
+            <h2 className="font-semibold text-lg text-stone-100 flex items-center gap-2">
+              <Settings className="text-stone-400" size={18} />
+              Interviewer Personality
+            </h2>
+
+            {/* Behavior Mode */}
+            <div>
+              <label className="block text-sm font-medium text-stone-300 mb-2">
+                Conversation Style
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {behaviorOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => { setAiBehavior(option.id); setIsDirty(true); }}
+                    className={`p-3 rounded-xl border text-left transition-colors ${aiBehavior === option.id
+                      ? 'bg-stone-700 border-stone-500 ring-1 ring-stone-500'
+                      : 'bg-stone-800 border-stone-600 hover:bg-stone-750'
+                      }`}
+                  >
+                    <div className={`font-medium mb-1 ${aiBehavior === option.id ? 'text-white' : 'text-stone-300'}`}>
+                      {option.label}
+                    </div>
+                    <div className="text-xs text-stone-400 leading-relaxed">
+                      {option.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tone Slider */}
+            <div>
+              <label className="block text-sm font-medium text-stone-300 mb-4">
+                Tone Warmth
+              </label>
+              <div className="px-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="4"
+                  step="1"
+                  value={toneOptions.findIndex(o => o.id === tone)}
+                  onChange={(e) => {
+                    const newTone = toneOptions[parseInt(e.target.value)].id;
+                    setTone(newTone);
+                    setIsDirty(true);
+                  }}
+                  className="w-full h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-stone-400"
+                />
+                <div className="flex justify-between mt-2">
+                  {toneOptions.map((option, index) => (
+                    <div
+                      key={option.id}
+                      className={`flex flex-col items-center cursor-pointer transition-colors ${tone === option.id ? 'text-white' : 'text-stone-500'}`}
+                      onClick={() => { setTone(option.id); setIsDirty(true); }}
+                      style={{ width: '20%' }}
+                    >
+                      <div className={`w-3 h-3 rounded-full mb-1 ${tone === option.id ? 'bg-stone-400' : 'bg-stone-700'}`} />
+                      <span className="text-xs font-medium text-center">{option.label}</span>
+                      <span className="text-[10px] text-center opacity-70 hidden md:block">{option.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1118,7 +1196,6 @@ const StudySetup: React.FC = () => {
             </div>
           )}
 
-          {/* Submit */}
           <div className="pt-4 border-t border-stone-700">
             <button
               onClick={handleSubmit}
@@ -1129,8 +1206,9 @@ const StudySetup: React.FC = () => {
             </button>
           </div>
         </motion.div>
-      </div>
-    </div>
+      </div >
+    </div >
+
   );
 };
 

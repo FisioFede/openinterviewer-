@@ -1,4 +1,4 @@
-import { StoredInterview, StoredStudy } from '@/types';
+import { StoredInterview, StoredStudy, StoredLink } from '@/types';
 
 // Helper for server-side fetch
 const getBaseUrl = () => {
@@ -102,6 +102,23 @@ export async function getStudyInterviews(studyId: string): Promise<StoredIntervi
     return data.interviews || [];
   } catch (error) {
     console.error('Error fetching study interviews:', error);
+    return [];
+  }
+}
+
+// Get generated links for a study
+export async function getStudyLinks(studyId: string): Promise<StoredLink[]> {
+  try {
+    const response = await fetch(`${getBaseUrl()}/api/studies/${studyId}/links`);
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.links || [];
+  } catch (error) {
+    console.error('Error fetching study links:', error);
     return [];
   }
 }

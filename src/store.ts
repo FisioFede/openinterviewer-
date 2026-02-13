@@ -109,6 +109,7 @@ interface ResearchState {
 
   // Participant Token (for URL-based study config)
   participantToken: string | null;
+  participantNickname: string | null;
 
   // Actions - Navigation
   setStep: (step: AppStep) => void;
@@ -146,6 +147,7 @@ interface ResearchState {
 
   // Actions - Token
   setParticipantToken: (token: string | null) => void;
+  setParticipantNickname: (nickname: string | null) => void;
 
   // Actions - Reset
   reset: () => void;
@@ -170,6 +172,7 @@ export const useStore = create<ResearchState>()(
       streamingMessage: null,
       isAiThinking: false,
       participantToken: null,
+      participantNickname: null,
 
       setStep: (step) => set((state) => ({
         previousStep: state.currentStep,
@@ -193,7 +196,7 @@ export const useStore = create<ResearchState>()(
         consentTimestamp: Date.now()
       }),
 
-      initializeProfile: (schema) => set({
+      initializeProfile: (schema) => set((state) => ({
         participantProfile: {
           id: `p-${Date.now()}`,
           fields: schema.map(field => ({
@@ -202,7 +205,8 @@ export const useStore = create<ResearchState>()(
             status: 'pending' as ProfileFieldStatus
           })),
           rawContext: '',
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          nickname: state.participantNickname || undefined
         },
         questionProgress: {
           questionsAsked: [],
@@ -210,7 +214,7 @@ export const useStore = create<ResearchState>()(
           currentPhase: 'background',
           isComplete: false
         }
-      }),
+      })),
 
       updateProfileField: (fieldId, value, status) => set((state) => {
         if (!state.participantProfile) return state;
@@ -297,6 +301,7 @@ export const useStore = create<ResearchState>()(
       setBehaviorData: (data) => set({ behaviorData: data }),
 
       setParticipantToken: (token) => set({ participantToken: token }),
+      setParticipantNickname: (nickname) => set({ participantNickname: nickname }),
 
       reset: () => set({
         currentStep: 'setup',
@@ -313,7 +318,8 @@ export const useStore = create<ResearchState>()(
         contextEntries: [],
         streamingMessage: null,
         isAiThinking: false,
-        participantToken: null
+        participantToken: null,
+        participantNickname: null
       }),
 
       resetParticipant: () => set((state) => ({
@@ -325,6 +331,8 @@ export const useStore = create<ResearchState>()(
         behaviorData: initialBehaviorData,
         synthesis: null,
         contextEntries: [],
+        streamingMessage: null,
+        isAiThinking: false,
         currentStep: state.studyConfig ? 'consent' : 'setup'
       }))
     }),
@@ -344,7 +352,8 @@ export const useStore = create<ResearchState>()(
         synthesis: state.synthesis,
         contextEntries: state.contextEntries,
         currentStep: state.currentStep,
-        participantToken: state.participantToken
+        participantToken: state.participantToken,
+        participantNickname: state.participantNickname
       })
     }
   )

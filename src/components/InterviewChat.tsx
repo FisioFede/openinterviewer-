@@ -1,35 +1,47 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store';
 import {
   generateInterviewResponse,
-  getInterviewGreeting
+  getInterviewGreeting,
+  synthesizeInterview
 } from '@/services/geminiService';
+import { saveCompletedInterview } from '@/services/storageService';
 import { InterviewMessage } from '@/types';
 import ReactMarkdown from 'react-markdown';
 import {
   Send,
   Loader2,
   Bot,
-  ArrowRight,
   MessageSquare,
   CheckCircle,
-  User
+  User,
+  X
 } from 'lucide-react';
 import { getTexts } from '@/lib/i18n';
 
+/**
+ * Main Interface Chat Component
+ * 
+ * Handles the core interview loop:
+ * 1. Initializes the session (greeting)
+ * 2. Manages the chat UI and user input
+ * 3. Calls AI services for responses
+ * 4. Handles synthesis and completion
+ */
 const InterviewChat: React.FC = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const {
     studyConfig,
     participantProfile,
     questionProgress,
     interviewHistory,
     addMessage,
-    setStep,
+    // setStep, // Not used in this version
     isAiThinking,
     setAiThinking,
     contextEntries,
@@ -39,15 +51,21 @@ const InterviewChat: React.FC = () => {
     completeInterview,
     updateProfileField,
     setProfileRawContext,
-    participantToken
+    participantToken,
+    behaviorData, // Added for synthesis
+    setSynthesis // Added for synthesis
   } = useStore();
 
   const [input, setInput] = useState('');
   const [initialized, setInitialized] = useState(false);
   const [showFinishOption, setShowFinishOption] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saving' | 'saved' | 'error' | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Refs to track async operations and prevent race conditions (React Strict Mode safety)
   const initializationRef = useRef(false);
+  const completionRef = useRef(false);
 
   // Get localized texts
   const t = getTexts(studyConfig);
@@ -65,7 +83,10 @@ const InterviewChat: React.FC = () => {
   }, [questionProgress.currentPhase]);
 
   // Initialize with greeting
+  // Logic includes safeguards for React Strict Mode (double-invocation)
   useEffect(() => {
+    let isMounted = true;
+
     const initialize = async () => {
       // Use ref to track if we've already started/completed init
       if (!studyConfig || initializationRef.current) {
@@ -73,24 +94,34 @@ const InterviewChat: React.FC = () => {
         return;
       }
 
-      // Also check if history exists in store
-      if (interviewHistory.length > 0) {
-        console.log('InterviewChat: History exists, skipping init');
+      // Check current store state directly to avoid race conditions
+      // This handles cases where another instance might have just added a message
+      if (useStore.getState().interviewHistory.length > 0) {
+        console.log('InterviewChat: History exists in store, skipping init');
         initializationRef.current = true; // Mark as initialized so we don't try again
         return;
       }
 
       console.log('InterviewChat: Starting initialization...');
       initializationRef.current = true;
-      setInitialized(true);
-      setAiThinking(true);
+      if (isMounted) {
+        setInitialized(true);
+        setAiThinking(true);
+      }
 
       try {
         console.log('InterviewChat: Fetching greeting...');
         const greeting = await getInterviewGreeting(studyConfig, participantToken);
         console.log('InterviewChat: Greeting received');
 
-        // Check if message already exists to be double sure
+        if (!isMounted) return;
+
+        // Double check store state before adding message
+        // This is crucial for preventing double greetings if multiple effects ran
+        if (useStore.getState().interviewHistory.length > 0) {
+          console.log('InterviewChat: Race condition detected - message already added, skipping');
+          return;
+        }
 
         const msg: InterviewMessage = {
           id: `msg-${Date.now()}`,
@@ -102,16 +133,91 @@ const InterviewChat: React.FC = () => {
         addMessage(msg);
       } catch (error) {
         console.error('InterviewChat: Error initializing:', error);
-        initializationRef.current = false;
+        if (isMounted) initializationRef.current = false;
       } finally {
         console.log('InterviewChat: Finishing init');
-        setAiThinking(false);
+        if (isMounted) setAiThinking(false);
       }
     };
 
     initialize();
+
+    return () => {
+      isMounted = false;
+    };
   }, [studyConfig, participantToken]);
 
+  // Handle completion (auto-save and background synthesis)
+  useEffect(() => {
+    const handleCompletion = async () => {
+      if (questionProgress.isComplete && !completionRef.current && studyConfig && participantProfile) {
+        completionRef.current = true;
+        setSaveStatus('saving');
+
+        const interviewId = participantProfile.id;
+        const createdAt = participantProfile.timestamp;
+
+        // 1. Save interview immediately (without synthesis)
+        try {
+          await saveCompletedInterview({
+            id: interviewId,
+            studyId: studyConfig.id,
+            studyName: studyConfig.name,
+            participantProfile: participantProfile,
+            transcript: interviewHistory,
+            synthesis: null, // No synthesis yet
+            behaviorData: behaviorData,
+            createdAt: createdAt
+          }, participantToken);
+          setSaveStatus('saved');
+        } catch (error) {
+          console.error('Error saving interview initially:', error);
+          setSaveStatus('error');
+          // Start synthesis anyway? Maybe. But let's assume we want to retry or just proceed.
+          // For now, let's proceed to synthesis freely.
+        }
+
+        // 2. Trigger background analysis
+        try {
+          console.log('Starting background synthesis...');
+          const result = await synthesizeInterview(
+            interviewHistory,
+            studyConfig,
+            behaviorData,
+            participantProfile,
+            participantToken
+          );
+          console.log('Background synthesis complete');
+          setSynthesis(result);
+
+          // 3. Save again with synthesis
+          await saveCompletedInterview({
+            id: interviewId,
+            studyId: studyConfig.id,
+            studyName: studyConfig.name,
+            participantProfile: participantProfile,
+            transcript: interviewHistory,
+            synthesis: result,
+            behaviorData: behaviorData,
+            createdAt: createdAt
+          }, participantToken);
+          console.log('Interview updated with synthesis');
+        } catch (error) {
+          console.error('Error in background synthesis/save:', error);
+          // We don't change status to error here because the interview IS saved, just without analysis.
+          // The Researcher can trigger analysis later manually.
+        }
+      }
+    };
+
+    handleCompletion();
+  }, [questionProgress.isComplete, studyConfig, participantProfile, interviewHistory, behaviorData, participantToken]);
+
+
+  /**
+   * Handles sending a user message.
+   * Updates state, calls AI service, and handles the response.
+   */
   const handleSend = async (textOverride?: string) => {
     const text = textOverride || input;
     if (!text.trim() || !studyConfig) return;
@@ -200,11 +306,6 @@ const InterviewChat: React.FC = () => {
     completeInterview();
   };
 
-  const handleViewAnalysis = () => {
-    setStep('synthesis');
-    router.push('/synthesis');
-  };
-
   if (!studyConfig) {
     return (
       <div className="min-h-screen bg-stone-900 flex items-center justify-center">
@@ -247,8 +348,8 @@ const InterviewChat: React.FC = () => {
               <div
                 key={i}
                 className={`w-2 h-2 rounded-full transition-colors ${questionProgress.questionsAsked.includes(i)
-                    ? 'bg-stone-400'
-                    : 'bg-stone-700'
+                  ? 'bg-stone-400'
+                  : 'bg-stone-700'
                   }`}
               />
             ))}
@@ -278,8 +379,8 @@ const InterviewChat: React.FC = () => {
             >
               <div
                 className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user'
-                    ? 'bg-stone-700 text-white rounded-br-md'
-                    : 'bg-stone-800 border border-stone-700 text-stone-100 rounded-bl-md'
+                  ? 'bg-stone-700 text-white rounded-br-md'
+                  : 'bg-stone-800 border border-stone-700 text-stone-100 rounded-bl-md'
                   }`}
               >
                 {msg.role === 'ai' && (
@@ -294,6 +395,7 @@ const InterviewChat: React.FC = () => {
                     <User size={14} />
                   </div>
                 )}
+                {/* Use ReactMarkdown for safe rendering. Ensure appropriate plugins if XSS is a concern. */}
                 <div className={`prose prose-sm max-w-none prose-invert`}>
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
@@ -329,21 +431,27 @@ const InterviewChat: React.FC = () => {
           className="p-6 bg-stone-800 border-t border-stone-700"
         >
           <div className="max-w-md mx-auto text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-stone-700 flex items-center justify-center mx-auto">
-              <CheckCircle size={24} className="text-stone-300" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">{t.completeTitle}</h3>
-              <p className="text-sm text-stone-400 mt-1">
-                {t.completeText}
-              </p>
-            </div>
-            <button
-              onClick={handleViewAnalysis}
-              className="px-6 py-3 bg-stone-600 hover:bg-stone-500 text-white font-medium rounded-xl transition-colors flex items-center gap-2 mx-auto"
-            >
-              {t.viewAnalysis} <ArrowRight size={18} />
-            </button>
+            {saveStatus === 'saving' ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 size={32} className="animate-spin text-stone-400" />
+                <p className="text-stone-300">{t.savingInterview}</p>
+              </div>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-full bg-green-900/30 flex items-center justify-center mx-auto">
+                  <CheckCircle size={24} className="text-green-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{t.completeTitle}</h3>
+                  <p className="text-sm text-stone-400 mt-1">
+                    {t.completeText}
+                  </p>
+                  <p className="text-xs text-stone-500 mt-2">
+                    {t.safeToClose}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </motion.div>
       ) : (

@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { StoredStudy, StoredInterview, AggregateSynthesisResult } from '@/types';
-import { getStudy, getStudyInterviews } from '@/services/storageService';
+import { StoredStudy, StoredInterview, AggregateSynthesisResult, StoredLink } from '@/types';
+import { getStudy, getStudyInterviews, getStudyLinks } from '@/services/storageService';
 import {
   Loader2,
   ArrowLeft,
@@ -26,28 +26,31 @@ import {
   ToggleLeft,
   ToggleRight,
   Copy,
-  Check
+  Check,
+  ExternalLink
 } from 'lucide-react';
 
 interface StudyDetailProps {
   studyId: string;
 }
 
-type TabType = 'overview' | 'interviews' | 'settings';
+type TabType = 'overview' | 'interviews' | 'links' | 'settings';
 
 const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
   const router = useRouter();
   const [study, setStudy] = useState<StoredStudy | null>(null);
   const [interviews, setInterviews] = useState<StoredInterview[]>([]);
+  const [links, setLinks] = useState<StoredLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [aggregateSynthesis, setAggregateSynthesis] = useState<AggregateSynthesisResult | null>(null);
   const [isGeneratingAggregate, setIsGeneratingAggregate] = useState(false);
   const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
   const [isTogglingLinks, setIsTogglingLinks] = useState(false);
-  const [participantLink, setParticipantLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [participantLink, setParticipantLink] = useState<string | null>(null); // For newly generated link
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [nickname, setNickname] = useState('');
 
   useEffect(() => {
     loadStudyData();
@@ -56,12 +59,14 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
   const loadStudyData = async () => {
     setLoading(true);
     try {
-      const [studyData, interviewData] = await Promise.all([
+      const [studyData, interviewData, linkData] = await Promise.all([
         getStudy(studyId),
-        getStudyInterviews(studyId)
+        getStudyInterviews(studyId),
+        getStudyLinks(studyId)
       ]);
       setStudy(studyData);
       setInterviews(interviewData);
+      setLinks(linkData);
     } catch (error) {
       console.error('Error loading study:', error);
     } finally {
@@ -115,7 +120,7 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
       const response = await fetch('/api/generate-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studyConfig: study.config })
+        body: JSON.stringify({ studyConfig: study.config, nickname: nickname || undefined })
       });
 
       if (!response.ok) {
@@ -124,8 +129,18 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
       }
 
       const data = await response.json();
-      if (data.url) {
+      if (data.url && data.token) {
         setParticipantLink(data.url);
+        // Refresh links list
+        const newLink: StoredLink = {
+          token: data.token,
+          url: data.url,
+          studyId: studyId,
+          createdAt: Date.now(),
+          nickname: nickname || undefined
+        };
+        setLinks([newLink, ...links]);
+        setNickname(''); // Reset nickname field
       }
     } catch (error) {
       console.error('Error generating link:', error);
@@ -135,12 +150,10 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
     }
   };
 
-  const handleCopyLink = () => {
-    if (participantLink) {
-      navigator.clipboard.writeText(participantLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const handleCopyLink = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedLink(text);
+    setTimeout(() => setCopiedLink(null), 2000);
   };
 
   const handleGenerateAggregateSynthesis = async () => {
@@ -248,6 +261,7 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <BarChart3 size={16} /> },
     { id: 'interviews', label: 'Interviews', icon: <Users size={16} /> },
+    { id: 'links', label: 'Interview Links', icon: <LinkIcon size={16} /> },
     { id: 'settings', label: 'Settings', icon: <Settings size={16} /> }
   ];
 
@@ -278,17 +292,16 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
                 <div className="flex items-center gap-3 mt-1 text-sm text-stone-400">
                   <span className="flex items-center gap-1">
                     <Users size={14} />
-                    {study.interviewCount} interviews
+                    {Math.max(links.length, study.interviewCount)} interviews ({study.interviewCount} completed)
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar size={14} />
                     Created {formatDate(study.createdAt)}
                   </span>
-                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-                    study.isLocked
-                      ? 'bg-stone-700 text-stone-400'
-                      : 'bg-green-900/50 text-green-400'
-                  }`}>
+                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${study.isLocked
+                    ? 'bg-stone-700 text-stone-400'
+                    : 'bg-green-900/50 text-green-400'
+                    }`}>
                     {study.isLocked ? <Lock size={10} /> : <Unlock size={10} />}
                     {study.isLocked ? 'Locked' : 'Editable'}
                   </span>
@@ -304,11 +317,10 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-stone-400 text-white'
-                  : 'border-transparent text-stone-500 hover:text-stone-400'
-              }`}
+              className={`px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                ? 'border-stone-400 text-white'
+                : 'border-transparent text-stone-500 hover:text-stone-400'
+                }`}
             >
               {tab.icon}
               {tab.label}
@@ -337,8 +349,13 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
               {/* Stats Summary */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-stone-800/50 rounded-xl border border-stone-700 p-4 text-center">
-                  <div className="text-3xl font-bold text-white">{study.interviewCount}</div>
-                  <div className="text-sm text-stone-400">Interviews</div>
+                  <div className="text-3xl font-bold text-white">
+                    {Math.max(links.length, study.interviewCount)}
+                    <span className="text-lg text-stone-500 font-normal ml-1">
+                      ({study.interviewCount})
+                    </span>
+                  </div>
+                  <div className="text-sm text-stone-400">Created (Completed)</div>
                 </div>
                 <div className="bg-stone-800/50 rounded-xl border border-stone-700 p-4 text-center">
                   <div className="text-3xl font-bold text-white">{study.config.coreQuestions.length}</div>
@@ -496,6 +513,101 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
             </div>
           )}
 
+          {activeTab === 'links' && (
+            <div className="space-y-6">
+              <div className="bg-stone-800/50 rounded-xl border border-stone-700 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-semibold text-white flex items-center gap-2">
+                    <LinkIcon size={18} className="text-stone-400" />
+                    Participant Links
+                  </h3>
+                  <button
+                    onClick={handleGenerateLink}
+                    disabled={generatingLink || !(study.config.linksEnabled ?? true)}
+                    className="px-4 py-2 bg-stone-600 hover:bg-stone-500 text-white text-sm rounded-lg disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {generatingLink ? <Loader2 size={14} className="animate-spin" /> : <LinkIcon size={14} />}
+                    Generate New Link
+                  </button>
+                </div>
+
+                {/* Link Toggles */}
+                <div className="flex items-center justify-between p-4 bg-stone-900/50 rounded-xl mb-6">
+                  <div>
+                    <div className="font-medium text-stone-200">Participant Access</div>
+                    <p className="text-sm text-stone-400">
+                      {(study.config.linksEnabled ?? true)
+                        ? 'Access enabled - participants can use links'
+                        : 'Access disabled - all links will show an error'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleToggleLinksEnabled}
+                    disabled={isTogglingLinks}
+                    className={`w-14 h-7 rounded-full transition-colors flex items-center px-1 ${(study.config.linksEnabled ?? true)
+                      ? 'bg-green-600'
+                      : 'bg-stone-600'
+                      } ${isTogglingLinks ? 'opacity-50' : ''}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${(study.config.linksEnabled ?? true) ? 'translate-x-7' : 'translate-x-0'
+                      }`} />
+                  </button>
+                </div>
+
+                {/* Generated Links List */}
+                <div className="space-y-3">
+                  {links.length === 0 ? (
+                    <div className="text-center py-8 text-stone-500">
+                      <p>No links generated yet.</p>
+                      <p className="text-sm">Generate a link to invite participants.</p>
+                    </div>
+                  ) : (
+                    links.map((link) => (
+                      <div key={link.token} className="flex items-center gap-3 p-3 bg-stone-900/30 border border-stone-700 rounded-lg group hover:border-stone-600 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-stone-300 font-mono text-sm truncate">{link.url}</span>
+                            <span className="text-xs text-stone-500 pt-0.5">
+                              • {formatDate(link.createdAt)}
+                            </span>
+                            {link.nickname && (
+                              <span className="text-xs bg-stone-800 text-stone-300 px-1.5 py-0.5 rounded ml-2 border border-stone-600">
+                                {link.nickname}
+                              </span>
+                            )}
+                          </div>
+                          {link.expiresAt && (
+                            <div className="text-xs text-amber-500/80 flex items-center gap-1">
+                              <Clock size={10} />
+                              Expires {formatDate(link.expiresAt)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => window.open(link.url, '_blank')}
+                            className="p-2 text-stone-500 hover:text-stone-300 transition-colors"
+                            title="Open Link"
+                          >
+                            <ExternalLink size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleCopyLink(link.url)}
+                            className="p-2 text-stone-500 hover:text-stone-300 transition-colors relative"
+                            title="Copy Link"
+                          >
+                            {copiedLink === link.url ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+
           {activeTab === 'settings' && (
             <div className="space-y-6">
               {study.interviewCount > 0 && (
@@ -580,15 +692,13 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
                   <button
                     onClick={handleToggleLinksEnabled}
                     disabled={isTogglingLinks}
-                    className={`w-14 h-7 rounded-full transition-colors flex items-center px-1 ${
-                      (study.config.linksEnabled ?? true)
-                        ? 'bg-green-600'
-                        : 'bg-stone-600'
-                    } ${isTogglingLinks ? 'opacity-50' : ''}`}
+                    className={`w-14 h-7 rounded-full transition-colors flex items-center px-1 ${(study.config.linksEnabled ?? true)
+                      ? 'bg-green-600'
+                      : 'bg-stone-600'
+                      } ${isTogglingLinks ? 'opacity-50' : ''}`}
                   >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      (study.config.linksEnabled ?? true) ? 'translate-x-7' : 'translate-x-0'
-                    }`} />
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${(study.config.linksEnabled ?? true) ? 'translate-x-7' : 'translate-x-0'
+                      }`} />
                   </button>
                 </div>
 
@@ -634,11 +744,11 @@ const StudyDetail: React.FC<StudyDetailProps> = ({ studyId }) => {
                         className="flex-1 bg-stone-900 border border-stone-600 rounded-lg px-3 py-2 text-stone-300 text-sm font-mono"
                       />
                       <button
-                        onClick={handleCopyLink}
+                        onClick={() => handleCopyLink(participantLink)}
                         className="px-3 py-2 bg-stone-700 hover:bg-stone-600 text-stone-300 rounded-lg flex items-center gap-1"
                       >
-                        {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
-                        {copied ? 'Copied!' : 'Copy'}
+                        {copiedLink === participantLink ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                        {copiedLink === participantLink ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
                   )}

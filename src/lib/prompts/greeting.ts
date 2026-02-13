@@ -16,6 +16,7 @@
  */
 
 import { StudyConfig } from '@/types';
+import { getToneInstruction } from './interview';
 
 /**
  * Build the greeting generation prompt
@@ -51,7 +52,9 @@ Write a warm, brief opening (2-3 sentences) that:
 2. Mentions you'll have about ${studyConfig.coreQuestions.length} main questions to explore
 3. Asks an opening background question that naturally gathers their ${profileFieldLabels[0] || 'background'} and context
 
-Keep it conversational and inviting. Start gathering their profile naturally - don't make it feel like a form.`;
+
+${getToneInstruction(studyConfig.tone)}
+Start gathering their profile naturally - don't make it feel like a form.`;
 };
 
 /**

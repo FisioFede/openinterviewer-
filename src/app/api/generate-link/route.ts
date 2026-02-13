@@ -7,8 +7,9 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';
-import { StudyConfig, ParticipantToken, LinkExpirationOption } from '@/types';
+import { StudyConfig, ParticipantToken, LinkExpirationOption, StoredLink } from '@/types';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { saveLink, isKVAvailable, incrementStudyLinkCount } from '@/lib/kv';
 
 // Convert link expiration option to jose expiration string
 const getExpirationTime = (option?: LinkExpirationOption): string | null => {
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { studyConfig } = body as { studyConfig: StudyConfig };
+    const { studyConfig, nickname } = body as { studyConfig: StudyConfig; nickname?: string };
 
     // Validate required fields
     if (!studyConfig) {
@@ -76,7 +77,8 @@ export async function POST(request: Request) {
       studyConfig,
       createdAt: Date.now(),
       // Store expiration info for display purposes
-      ...(expirationTime && { expiresAt: Date.now() + (expirationTime === '7d' ? 7 : expirationTime === '30d' ? 30 : 90) * 24 * 60 * 60 * 1000 })
+      ...(expirationTime && { expiresAt: Date.now() + (expirationTime === '7d' ? 7 : expirationTime === '30d' ? 30 : 90) * 24 * 60 * 60 * 1000 }),
+      ...(nickname && { nickname })
     };
 
     // Sign the token (with or without expiration)
@@ -97,6 +99,24 @@ export async function POST(request: Request) {
       : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
     const participantUrl = `${baseUrl}/p/${token}`;
+
+    // Store the generated link
+    const storedLink: StoredLink = {
+      token,
+      url: participantUrl,
+      studyId: studyConfig.id,
+      createdAt: tokenData.createdAt,
+      expiresAt: tokenData.expiresAt,
+      nickname
+    };
+
+    if (await isKVAvailable()) {
+      await saveLink(storedLink);
+      // Increment study link count in background
+      incrementStudyLinkCount(studyConfig.id).catch(err =>
+        console.error('Failed to increment link count:', err)
+      );
+    }
 
     return NextResponse.json({
       token,

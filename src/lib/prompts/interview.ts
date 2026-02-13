@@ -16,7 +16,7 @@
  * - questionProgress: Tracks which questions have been asked
  */
 
-import { StudyConfig, ParticipantProfile, QuestionProgress } from '@/types';
+import { StudyConfig, ParticipantProfile, QuestionProgress, InterviewerTone } from '@/types';
 
 /**
  * AI Behavior Modes
@@ -46,6 +46,54 @@ export const getAIBehaviorInstruction = (behavior: StudyConfig['aiBehavior']): s
 - Balance script completion with natural conversation
 - Follow up once or twice on key insights, then move on
 - Note interesting tangents for the Exploration phase later`;
+  }
+
+};
+
+/**
+ * Interviewer Tone Instructions
+ * 
+ * Controls the personality/warmth of the AI:
+ * - formal: Cold, objective, distant
+ * - professional: Polite but business-like
+ * - neutral: Normal conversational (default)
+ * - friendly: Warm, engaging, welcoming
+ * - extremely_friendly: Enthusiastic, close friend
+ */
+export const getToneInstruction = (tone: InterviewerTone = 'neutral'): string => {
+  switch (tone) {
+    case 'formal':
+      return `TONE: Formal
+- Maintain professional distance
+- Be objective and detached
+- Use precise, academic language
+- Avoid all casualisms or warmth`;
+
+    case 'professional':
+      return `TONE: Professional
+- Be polite and respectful but strictly business-like
+- Focus on the task involved
+- Maintain a courteous but reserved demeanor`;
+
+    case 'friendly':
+      return `TONE: Friendly
+- Be warm and welcoming
+- Use engaging, natural language
+- Show interest in the participant's responses
+- Feel free to be slightly casual where appropriate`;
+
+    case 'extremely_friendly':
+      return `TONE: Extremely Friendly (Bestie Mode)
+- Act like a close friend
+- Be very enthusiastic and high-energy
+- Use casual language and slang where appropriate
+- Show high empathy and excitement`;
+
+    default: // 'neutral'
+      return `TONE: Neutral
+- Normal conversational tone
+- Neither overly cold nor overly intimate
+- Natural and balanced`;
   }
 };
 
@@ -100,7 +148,10 @@ export const buildInterviewSystemPrompt = (
     ? 'IMPORTANT: You must conduct this interview entirely in Japanese. Translate any system instructions or questions into natural, professional Japanese.'
     : 'Language: English';
 
+  const participantNickname = participantProfile?.nickname;
+
   return `You are an AI research interviewer conducting a qualitative study.
+${participantNickname ? `PARTICIPANT IDENTIFIER: ${participantNickname}` : ''}
 ${languageInstruction}
 
 STUDY DETAILS:
@@ -109,6 +160,8 @@ STUDY DETAILS:
 - Topics to Explore: ${studyConfig.topicAreas.join(', ')}
 
 ${getAIBehaviorInstruction(studyConfig.aiBehavior)}
+
+${getToneInstruction(studyConfig.tone)}
 
 CURRENT INTERVIEW STATE:
 - Phase: ${questionProgress.currentPhase}
@@ -136,6 +189,8 @@ RULES:
 - When a core question is substantially addressed, note its index
 - Extract profile data from user responses when mentioned
 - Signal shouldConclude=true only after feedback phase is complete
+- ALWAYS end your response with a question, unless the interview is concluding (shouldConclude=true)
+- If the user asks a question, answer it briefly and then immediately ask a follow-up or return to the topic. Do not just answer.
 
 ${currentContext ? `ADDITIONAL CONTEXT:\n${currentContext}` : ''}`;
 };

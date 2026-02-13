@@ -44,6 +44,7 @@ export interface ParticipantProfile {
   fields: ProfileFieldValue[];  // Structured field values
   rawContext: string;           // Full context summary from conversation
   timestamp: number;
+  nickname?: string;            // Optional nickname for personalized addressing
 }
 
 // ============================================
@@ -51,6 +52,8 @@ export interface ParticipantProfile {
 // ============================================
 
 export type AIBehavior = 'structured' | 'standard' | 'exploratory';
+
+export type InterviewerTone = 'formal' | 'professional' | 'neutral' | 'friendly' | 'extremely_friendly';
 
 export type AIProviderType = 'gemini' | 'claude';
 
@@ -98,6 +101,7 @@ export interface StudyConfig {
   topicAreas: string[];           // General topic areas for synthesis
   profileSchema: ProfileField[];  // Fields to collect during interview
   aiBehavior: AIBehavior;
+  tone?: InterviewerTone;         // Tone of the interviewer (default: 'neutral')
   aiProvider?: AIProviderType;    // Optional, defaults to env or 'gemini'
   aiModel?: string;               // Optional, defaults to provider-specific env or default
   consentText: string;
@@ -207,6 +211,7 @@ export interface ParticipantToken {
   studyConfig: StudyConfig;
   createdAt: number;
   expiresAt?: number;
+  nickname?: string;
 }
 
 // ============================================
@@ -219,6 +224,7 @@ export interface StoredStudy {
   createdAt: number;
   updatedAt: number;
   interviewCount: number;        // Cached count for dashboard display
+  linkCount?: number;            // Cached count of generated links
   isLocked: boolean;             // True after first interview collected
 }
 
@@ -235,4 +241,18 @@ export interface AggregateSynthesisResult {
   researchImplications: string[];
   bottomLine: string;           // One-paragraph summary of all interviews
   generatedAt: number;
+}
+
+// ============================================
+// Stored Link (Vercel KV)
+// ============================================
+
+export interface StoredLink {
+  token: string;
+  url: string;
+  studyId: string;
+  createdAt: number;
+  expiresAt?: number;
+  nickname?: string;
+  // We can track usage count here if needed later
 }
