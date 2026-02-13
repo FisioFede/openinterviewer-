@@ -28,7 +28,8 @@ import {
   GitBranch,
   Clock,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  Globe
 } from 'lucide-react';
 
 // Common profile field presets
@@ -78,6 +79,9 @@ const StudySetup: React.FC = () => {
   const [consentText, setConsentText] = useState(
     studyConfig?.consentText ||
     'Thank you for participating in this research study. Your responses will be used to understand [research topic]. You may stop at any time. Do you consent to participate?'
+  );
+  const [language, setLanguage] = useState<'jp' | 'en'>(
+    studyConfig?.language || 'jp'
   );
 
   // Participant link generation
@@ -214,6 +218,7 @@ const StudySetup: React.FC = () => {
       setEnableReasoning(studyConfig.enableReasoning);
       setLinkExpiration(studyConfig.linkExpiration || 'never');
       setConsentText(studyConfig.consentText);
+      setLanguage(studyConfig.language || 'jp');
     }
   }, [studyConfig]);
 
@@ -300,6 +305,7 @@ const StudySetup: React.FC = () => {
     linkExpiration,
     linksEnabled: true, // Always true when creating/editing (revocation is in StudyDetail)
     consentText,
+    language,
     createdAt: studyConfig?.createdAt || Date.now(),
     // Include parent study info if this is a follow-up
     ...(parentStudyInfo && {
@@ -323,12 +329,15 @@ const StudySetup: React.FC = () => {
 
     // Generate a temporary preview token for API authentication
     try {
+      console.log('Generating preview token with config:', config);
       const { token } = await generateParticipantLink(config);
+      console.log('Generated token:', token);
       setParticipantToken(token);
     } catch (error) {
       // If token generation fails (e.g., not logged in), proceed anyway
       // The admin session cookie will be used as fallback for authenticated researchers
-      console.warn('Could not generate preview token, using session auth:', error);
+      console.error('Could not generate preview token, using session auth:', error);
+      alert('Warning: Could not generate participant token. You may encounter errors if not logged in as admin.');
     }
 
     setIsPreviewLoading(false);
@@ -541,13 +550,12 @@ const StudySetup: React.FC = () => {
                   <button
                     onClick={handleSaveStudy}
                     disabled={!isAuthenticated || isSaving || (!!savedStudyId && !isDirty)}
-                    className={`px-4 py-2 text-sm rounded-xl transition-colors flex items-center gap-2 disabled:cursor-not-allowed ${
-                      savedStudyId && !isDirty
-                        ? 'bg-green-900/50 text-green-400 border border-green-700'
-                        : saveSuccess
+                    className={`px-4 py-2 text-sm rounded-xl transition-colors flex items-center gap-2 disabled:cursor-not-allowed ${savedStudyId && !isDirty
+                      ? 'bg-green-900/50 text-green-400 border border-green-700'
+                      : saveSuccess
                         ? 'bg-green-700 text-white'
                         : 'bg-stone-700 hover:bg-stone-600 text-stone-300'
-                    } ${isSaving || isAuthenticated === null ? 'opacity-50' : ''}`}
+                      } ${isSaving || isAuthenticated === null ? 'opacity-50' : ''}`}
                   >
                     {isSaving ? (
                       <Loader2 size={16} className="animate-spin" />
@@ -590,9 +598,9 @@ const StudySetup: React.FC = () => {
           >
             <div className="text-red-400 flex-shrink-0 mt-0.5">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
             </div>
             <div className="flex-1">
@@ -604,8 +612,8 @@ const StudySetup: React.FC = () => {
               className="text-red-400 hover:text-red-300 flex-shrink-0"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </motion.div>
@@ -681,6 +689,32 @@ const StudySetup: React.FC = () => {
                 className="w-full px-4 py-3 rounded-xl bg-stone-800 border border-stone-600 text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-stone-500 resize-none"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-stone-300 mb-1">
+                Language
+              </label>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => { setLanguage('jp'); setIsDirty(true); }}
+                  className={`flex-1 px-4 py-3 rounded-xl border flex items-center justify-center gap-2 transition-colors ${language === 'jp'
+                    ? 'bg-stone-700 border-stone-500 text-white'
+                    : 'bg-stone-800 border-stone-600 text-stone-400 hover:bg-stone-700'
+                    }`}
+                >
+                  <span className="text-xl">🇯🇵</span> Japanese
+                </button>
+                <button
+                  onClick={() => { setLanguage('en'); setIsDirty(true); }}
+                  className={`flex-1 px-4 py-3 rounded-xl border flex items-center justify-center gap-2 transition-colors ${language === 'en'
+                    ? 'bg-stone-700 border-stone-500 text-white'
+                    : 'bg-stone-800 border-stone-600 text-stone-400 hover:bg-stone-700'
+                    }`}
+                >
+                  <span className="text-xl">🇺🇸</span> English
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Profile Fields */}
@@ -742,11 +776,10 @@ const StudySetup: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => toggleFieldRequired(field.id)}
-                        className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${
-                          field.required
-                            ? 'bg-stone-600 text-stone-200'
-                            : 'bg-stone-700 text-stone-400'
-                        }`}
+                        className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${field.required
+                          ? 'bg-stone-600 text-stone-200'
+                          : 'bg-stone-700 text-stone-400'
+                          }`}
                         title={field.required ? 'Required field' : 'Optional field'}
                       >
                         {field.required ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
@@ -861,11 +894,10 @@ const StudySetup: React.FC = () => {
               {providerOptions.map((option) => (
                 <label
                   key={option.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                    aiProvider === option.id
-                      ? 'border-stone-500 bg-stone-700'
-                      : 'border-stone-700 hover:border-stone-600'
-                  }`}
+                  className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${aiProvider === option.id
+                    ? 'border-stone-500 bg-stone-700'
+                    : 'border-stone-700 hover:border-stone-600'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -961,11 +993,10 @@ const StudySetup: React.FC = () => {
               {behaviorOptions.map((option) => (
                 <label
                   key={option.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                    aiBehavior === option.id
-                      ? 'border-stone-500 bg-stone-700'
-                      : 'border-stone-700 hover:border-stone-600'
-                  }`}
+                  className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${aiBehavior === option.id
+                    ? 'border-stone-500 bg-stone-700'
+                    : 'border-stone-700 hover:border-stone-600'
+                    }`}
                 >
                   <input
                     type="radio"

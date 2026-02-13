@@ -8,7 +8,7 @@ import {
   generateInterviewResponse,
   getInterviewGreeting
 } from '@/services/geminiService';
-import { InterviewMessage, InterviewPhase } from '@/types';
+import { InterviewMessage } from '@/types';
 import ReactMarkdown from 'react-markdown';
 import {
   Send,
@@ -19,15 +19,7 @@ import {
   CheckCircle,
   User
 } from 'lucide-react';
-
-// Phase display labels
-const phaseLabels: Record<InterviewPhase, string> = {
-  'background': 'Getting to know you',
-  'core-questions': 'Core Questions',
-  'exploration': 'Exploring further',
-  'feedback': 'Your feedback',
-  'wrap-up': 'Wrapping up'
-};
+import { getTexts } from '@/lib/i18n';
 
 const InterviewChat: React.FC = () => {
   const router = useRouter();
@@ -55,6 +47,10 @@ const InterviewChat: React.FC = () => {
   const [showFinishOption, setShowFinishOption] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initializationRef = useRef(false);
+
+  // Get localized texts
+  const t = getTexts(studyConfig);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -70,18 +66,31 @@ const InterviewChat: React.FC = () => {
 
   // Initialize with greeting
   useEffect(() => {
-    let mounted = true;
-
     const initialize = async () => {
-      if (!studyConfig || initialized || interviewHistory.length > 0) return;
+      // Use ref to track if we've already started/completed init
+      if (!studyConfig || initializationRef.current) {
+        console.log('InterviewChat: Skipping init (already done or config missing)');
+        return;
+      }
 
+      // Also check if history exists in store
+      if (interviewHistory.length > 0) {
+        console.log('InterviewChat: History exists, skipping init');
+        initializationRef.current = true; // Mark as initialized so we don't try again
+        return;
+      }
+
+      console.log('InterviewChat: Starting initialization...');
+      initializationRef.current = true;
       setInitialized(true);
       setAiThinking(true);
 
       try {
+        console.log('InterviewChat: Fetching greeting...');
         const greeting = await getInterviewGreeting(studyConfig, participantToken);
+        console.log('InterviewChat: Greeting received');
 
-        if (!mounted) return; // Prevent state update if unmounted
+        // Check if message already exists to be double sure
 
         const msg: InterviewMessage = {
           id: `msg-${Date.now()}`,
@@ -89,18 +98,19 @@ const InterviewChat: React.FC = () => {
           content: greeting,
           timestamp: Date.now()
         };
+        console.log('InterviewChat: Adding message to store...');
         addMessage(msg);
       } catch (error) {
-        console.error('Error initializing interview:', error);
+        console.error('InterviewChat: Error initializing:', error);
+        initializationRef.current = false;
       } finally {
-        if (mounted) setAiThinking(false);
+        console.log('InterviewChat: Finishing init');
+        setAiThinking(false);
       }
     };
 
     initialize();
-
-    return () => { mounted = false; };
-  }, [studyConfig, initialized, interviewHistory.length]);
+  }, [studyConfig, participantToken]);
 
   const handleSend = async (textOverride?: string) => {
     const text = textOverride || input;
@@ -177,7 +187,7 @@ const InterviewChat: React.FC = () => {
       const errorMsg: InterviewMessage = {
         id: `msg-${Date.now()}`,
         role: 'ai',
-        content: "I appreciate you sharing that. Could you tell me more?",
+        content: t.errorResponse,
         timestamp: Date.now()
       };
       addMessage(errorMsg);
@@ -198,7 +208,7 @@ const InterviewChat: React.FC = () => {
   if (!studyConfig) {
     return (
       <div className="min-h-screen bg-stone-900 flex items-center justify-center">
-        <p className="text-stone-400">No study configured.</p>
+        <p className="text-stone-400">{t.noStudy}</p>
       </div>
     );
   }
@@ -210,13 +220,10 @@ const InterviewChat: React.FC = () => {
 
   // Progress display
   const getProgressDisplay = () => {
-    if (questionProgress.currentPhase === 'background') {
-      return phaseLabels['background'];
-    }
     if (questionProgress.currentPhase === 'core-questions') {
-      return `Question ${Math.min(questionsCompleted + 1, totalQuestions)} of ${totalQuestions}`;
+      return t.questionOf(Math.min(questionsCompleted + 1, totalQuestions), totalQuestions);
     }
-    return phaseLabels[questionProgress.currentPhase];
+    return t.phases[questionProgress.currentPhase] || t.phases['background'];
   };
 
   return (
@@ -239,11 +246,10 @@ const InterviewChat: React.FC = () => {
             {Array.from({ length: totalQuestions }).map((_, i) => (
               <div
                 key={i}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  questionProgress.questionsAsked.includes(i)
+                className={`w-2 h-2 rounded-full transition-colors ${questionProgress.questionsAsked.includes(i)
                     ? 'bg-stone-400'
                     : 'bg-stone-700'
-                }`}
+                  }`}
               />
             ))}
           </div>
@@ -254,7 +260,7 @@ const InterviewChat: React.FC = () => {
               onClick={handleFinishEarly}
               className="text-xs text-stone-500 hover:text-stone-400 transition-colors"
             >
-              Finish early
+              {t.finishEarly}
             </button>
           )}
         </div>
@@ -271,21 +277,20 @@ const InterviewChat: React.FC = () => {
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-2xl p-4 ${
-                  msg.role === 'user'
+                className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user'
                     ? 'bg-stone-700 text-white rounded-br-md'
                     : 'bg-stone-800 border border-stone-700 text-stone-100 rounded-bl-md'
-                }`}
+                  }`}
               >
                 {msg.role === 'ai' && (
                   <div className="flex items-center gap-2 mb-2 text-xs text-stone-500">
                     <Bot size={14} />
-                    Interviewer
+                    {t.interviewer}
                   </div>
                 )}
                 {msg.role === 'user' && (
                   <div className="flex items-center gap-2 mb-2 text-xs text-stone-400 justify-end">
-                    You
+                    {t.you}
                     <User size={14} />
                   </div>
                 )}
@@ -307,7 +312,7 @@ const InterviewChat: React.FC = () => {
             <div className="bg-stone-800 border border-stone-700 rounded-2xl rounded-bl-md p-4">
               <div className="flex items-center gap-2 text-stone-400 text-sm">
                 <Loader2 size={16} className="animate-spin" />
-                Thinking...
+                {t.thinking}
               </div>
             </div>
           </motion.div>
@@ -328,16 +333,16 @@ const InterviewChat: React.FC = () => {
               <CheckCircle size={24} className="text-stone-300" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Interview Complete</h3>
+              <h3 className="text-lg font-semibold text-white">{t.completeTitle}</h3>
               <p className="text-sm text-stone-400 mt-1">
-                Your responses have been saved. Thank you for participating.
+                {t.completeText}
               </p>
             </div>
             <button
               onClick={handleViewAnalysis}
               className="px-6 py-3 bg-stone-600 hover:bg-stone-500 text-white font-medium rounded-xl transition-colors flex items-center gap-2 mx-auto"
             >
-              View Analysis <ArrowRight size={18} />
+              {t.viewAnalysis} <ArrowRight size={18} />
             </button>
           </div>
         </motion.div>
@@ -350,7 +355,7 @@ const InterviewChat: React.FC = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !isAiThinking && handleSend()}
-                placeholder="Type your response..."
+                placeholder={t.typeResponse}
                 disabled={isAiThinking}
                 className="flex-1 px-4 py-3 bg-stone-900 border border-stone-600 text-stone-100 placeholder-stone-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-stone-500 disabled:opacity-50"
               />

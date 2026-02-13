@@ -1,0 +1,80 @@
+
+> openinterviewer@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.33
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 905ms
+ ✓ Compiled /src/middleware in 109ms (152 modules)
+ ○ Compiling /setup ...
+ ✓ Compiled /setup in 1673ms (1255 modules)
+ GET /setup 200 in 1844ms
+ ✓ Compiled in 147ms (631 modules)
+ ✓ Compiled /api/auth in 186ms (750 modules)
+ GET /api/auth 200 in 236ms
+ ✓ Compiled /api/config/status in 44ms (752 modules)
+ GET /api/config/status 200 in 74ms
+ ✓ Compiled /api/generate-link in 68ms (754 modules)
+ POST /api/generate-link 200 in 103ms
+ ✓ Compiled /consent in 190ms (1388 modules)
+ ○ Compiling /interview ...
+ ✓ Compiled /interview in 653ms (1746 modules)
+ ✓ Compiled /api/greeting in 153ms (1165 modules)
+ ✓ Compiled /api/studies/[id] in 107ms (1172 modules)
+ GET /api/studies/study-1770386909360 401 in 299ms
+Greeting API Auth Check: {
+  valid: true,
+  studyIdViaToken: 'study-1770386909360',
+  isAdmin: undefined,
+  error: undefined
+}
+ POST /api/greeting 200 in 12508ms
+ GET /api/auth 200 in 6ms
+ GET /api/config/status 200 in 4ms
+ POST /api/generate-link 200 in 16ms
+ GET /api/auth 200 in 3ms
+ GET /api/config/status 200 in 9ms
+ ✓ Compiled / in 275ms (1625 modules)
+ GET / 307 in 352ms
+ ✓ Compiled /login in 137ms (1638 modules)
+ GET /login?redirect=%2Fstudies 200 in 208ms
+ ⚠ Cross origin request detected from pas-host to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ✓ Compiled /api/auth in 72ms (961 modules)
+ POST /api/auth 200 in 118ms
+ ✓ Compiled /studies in 432ms (1791 modules)
+ ✓ Compiled /api/studies in 179ms (984 modules)
+ GET /api/studies 200 in 224ms
+ ✓ Compiled /studies/[id] in 176ms (1812 modules)
+ ✓ Compiled /api/interviews in 66ms (994 modules)
+ ✓ Compiled (996 modules)
+ GET /api/studies/574fa996-419e-45ff-b59d-907e9f820342 200 in 187ms
+ GET /api/interviews?studyId=574fa996-419e-45ff-b59d-907e9f820342 200 in 186ms
+ ✓ Compiled /api/generate-link in 161ms (968 modules)
+ POST /api/generate-link 200 in 210ms
+ ○ Compiling /p/[token] ...
+ ✓ Compiled /p/[token] in 586ms (1696 modules)
+ GET /p/eyJhbGciOiJIUzI1NiJ9.eyJzdHVkeUlkIjoiNTc0ZmE5OTYtNDE5ZS00NWZmLWI1OWQtOTA3ZTlmODIwMzQyIiwic3R1ZHlDb25maWciOnsiaWQiOiI1NzRmYTk5Ni00MTllLTQ1ZmYtYjU5ZC05MDdlOWY4MjAzNDIiLCJuYW1lIjoiVEVzdCIsImRlc2NyaXB0aW9uIjoiIiwicmVzZWFyY2hRdWVzdGlvbiI6IkhvdyBkb2VzIHRoaXMgd29yaz8iLCJjb3JlUXVlc3Rpb25zIjpbImFyZSB5b3Ugc2l0dGluZyBjb21mb3J0YWJseT8iLCJob3cgYXJlIHlvdSBmZWVsaW5nPyIsIndoYXQgaXMgeW91ciBvcGluaW9uIG9uIGxvdmUgYXQgZmlyc3Qgc2lnaHQ_Il0sInRvcGljQXJlYXMiOlsiU2Vuc2Ugb2Ygc2VsZiJdLCJwcm9maWxlU2NoZW1hIjpbeyJpZCI6InJvbGUiLCJsYWJlbCI6IkN1cnJlbnQgUm9sZSIsImV4dHJhY3Rpb25IaW50IjoiVGhlaXIgam9iIHRpdGxlIG9yIHByb2Zlc3Npb25hbCByb2xlIiwicmVxdWlyZWQiOnRydWV9XSwiYWlCZWhhdmlvciI6InN0YW5kYXJkIiwiYWlQcm92aWRlciI6ImdlbWluaSIsImFpTW9kZWwiOiJnZW1pbmktMi41LWZsYXNoIiwibGlua0V4cGlyYXRpb24iOiJuZXZlciIsImxpbmtzRW5hYmxlZCI6dHJ1ZSwiY29uc2VudFRleHQiOiJXZWxjb21lIHRvIFRoZSBBZGFwdGl2ZSBTZWxmIHN0dWR5LlxuXG5CZWZvcmUgd2UgYmVnaW4sIHBsZWFzZSB1bmRlcnN0YW5kIHlvdSB3aWxsIGJlIGludGVydmlld2VkIGJ5IGFuIEFJIHJlc2VhcmNoIGFzc2lzdGFudCwgbm90IGEgaHVtYW4uXG5cblRoZSBwdXJwb3NlIGlzIHRvIHVuZGVyc3RhbmQgeW91ciBwZXJzb25hbCB0aG91Z2h0cyBhbmQgZXhwZXJpZW5jZXMgcmVnYXJkaW5nIEFJIGFuZCB5b3VyIGNhcmVlci4gVGhlcmUgYXJlIG5vIHJpZ2h0IG9yIHdyb25nIGFuc3dlcnPigJR3ZSdyZSBpbnRlcmVzdGVkIGluIG51YW5jZTogeW91ciBob3BlcywgYW54aWV0aWVzLCBhbmQgaG9uZXN0IHJlZmxlY3Rpb25zLlxuXG5Zb3VyIHJlc3BvbnNlcyB3aWxsIGJlIGFub255bWl6ZWQgYW5kIGFuYWx5emVkIGZvciByZXNlYXJjaCB0aGVtZXMuIFlvdSBtYXkgZGVjbGluZSBhbnkgcXVlc3Rpb24gb3IgZW5kIHRoZSBzZXNzaW9uIGFueXRpbWUuXG5cbkJ5IHByb2NlZWRpbmcsIHlvdSBhY2tub3dsZWRnZSB5b3UncmUgaW50ZXJhY3Rpbmcgd2l0aCBhbiBBSSBhbmQgY29uc2VudCB0byB0aGlzIGNvbnZlcnNhdGlvbiBiZWluZyBjb2xsZWN0ZWQgZm9yIHJlc2VhcmNoIHB1cnBvc2VzLiIsImxhbmd1YWdlIjoiZW4iLCJjcmVhdGVkQXQiOjE3NzAzNjczNzE1Njd9LCJjcmVhdGVkQXQiOjE3NzAzODc3NTUyNzIsImlhdCI6MTc3MDM4Nzc1NX0.OtfOJlQ4qffrInYF4rY3IhKS1HNGoTqxdjR9YI_CBuE 200 in 849ms
+ ✓ Compiled /api/generate-link in 82ms (988 modules)
+ GET /api/generate-link?token=eyJhbGciOiJIUzI1NiJ9.eyJzdHVkeUlkIjoiNTc0ZmE5OTYtNDE5ZS00NWZmLWI1OWQtOTA3ZTlmODIwMzQyIiwic3R1ZHlDb25maWciOnsiaWQiOiI1NzRmYTk5Ni00MTllLTQ1ZmYtYjU5ZC05MDdlOWY4MjAzNDIiLCJuYW1lIjoiVEVzdCIsImRlc2NyaXB0aW9uIjoiIiwicmVzZWFyY2hRdWVzdGlvbiI6IkhvdyBkb2VzIHRoaXMgd29yaz8iLCJjb3JlUXVlc3Rpb25zIjpbImFyZSB5b3Ugc2l0dGluZyBjb21mb3J0YWJseT8iLCJob3cgYXJlIHlvdSBmZWVsaW5nPyIsIndoYXQgaXMgeW91ciBvcGluaW9uIG9uIGxvdmUgYXQgZmlyc3Qgc2lnaHQ_Il0sInRvcGljQXJlYXMiOlsiU2Vuc2Ugb2Ygc2VsZiJdLCJwcm9maWxlU2NoZW1hIjpbeyJpZCI6InJvbGUiLCJsYWJlbCI6IkN1cnJlbnQgUm9sZSIsImV4dHJhY3Rpb25IaW50IjoiVGhlaXIgam9iIHRpdGxlIG9yIHByb2Zlc3Npb25hbCByb2xlIiwicmVxdWlyZWQiOnRydWV9XSwiYWlCZWhhdmlvciI6InN0YW5kYXJkIiwiYWlQcm92aWRlciI6ImdlbWluaSIsImFpTW9kZWwiOiJnZW1pbmktMi41LWZsYXNoIiwibGlua0V4cGlyYXRpb24iOiJuZXZlciIsImxpbmtzRW5hYmxlZCI6dHJ1ZSwiY29uc2VudFRleHQiOiJXZWxjb21lIHRvIFRoZSBBZGFwdGl2ZSBTZWxmIHN0dWR5LlxuXG5CZWZvcmUgd2UgYmVnaW4sIHBsZWFzZSB1bmRlcnN0YW5kIHlvdSB3aWxsIGJlIGludGVydmlld2VkIGJ5IGFuIEFJIHJlc2VhcmNoIGFzc2lzdGFudCwgbm90IGEgaHVtYW4uXG5cblRoZSBwdXJwb3NlIGlzIHRvIHVuZGVyc3RhbmQgeW91ciBwZXJzb25hbCB0aG91Z2h0cyBhbmQgZXhwZXJpZW5jZXMgcmVnYXJkaW5nIEFJIGFuZCB5b3VyIGNhcmVlci4gVGhlcmUgYXJlIG5vIHJpZ2h0IG9yIHdyb25nIGFuc3dlcnPigJR3ZSdyZSBpbnRlcmVzdGVkIGluIG51YW5jZTogeW91ciBob3BlcywgYW54aWV0aWVzLCBhbmQgaG9uZXN0IHJlZmxlY3Rpb25zLlxuXG5Zb3VyIHJlc3BvbnNlcyB3aWxsIGJlIGFub255bWl6ZWQgYW5kIGFuYWx5emVkIGZvciByZXNlYXJjaCB0aGVtZXMuIFlvdSBtYXkgZGVjbGluZSBhbnkgcXVlc3Rpb24gb3IgZW5kIHRoZSBzZXNzaW9uIGFueXRpbWUuXG5cbkJ5IHByb2NlZWRpbmcsIHlvdSBhY2tub3dsZWRnZSB5b3UncmUgaW50ZXJhY3Rpbmcgd2l0aCBhbiBBSSBhbmQgY29uc2VudCB0byB0aGlzIGNvbnZlcnNhdGlvbiBiZWluZyBjb2xsZWN0ZWQgZm9yIHJlc2VhcmNoIHB1cnBvc2VzLiIsImxhbmd1YWdlIjoiZW4iLCJjcmVhdGVkQXQiOjE3NzAzNjczNzE1Njd9LCJjcmVhdGVkQXQiOjE3NzAzODc3NTUyNzIsImlhdCI6MTc3MDM4Nzc1NX0.OtfOJlQ4qffrInYF4rY3IhKS1HNGoTqxdjR9YI_CBuE 200 in 132ms
+ ✓ Compiled /api/greeting in 300ms (1204 modules)
+ ✓ Compiled /api/studies/[id] in 120ms (1211 modules)
+ GET /api/studies/574fa996-419e-45ff-b59d-907e9f820342 401 in 162ms
+Greeting API Auth Check: {
+  valid: true,
+  studyIdViaToken: '574fa996-419e-45ff-b59d-907e9f820342',
+  isAdmin: undefined,
+  error: undefined
+}
+ GET /api/studies/574fa996-419e-45ff-b59d-907e9f820342 401 in 14ms
+Greeting API Auth Check: {
+  valid: true,
+  studyIdViaToken: '574fa996-419e-45ff-b59d-907e9f820342',
+  isAdmin: undefined,
+  error: undefined
+}
+ POST /api/greeting 200 in 3787ms
+ POST /api/greeting 200 in 6101ms

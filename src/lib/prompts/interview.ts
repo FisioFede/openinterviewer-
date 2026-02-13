@@ -96,7 +96,12 @@ export const buildInterviewSystemPrompt = (
     return !value || value.status === 'pending' || value.status === 'vague';
   });
 
+  const languageInstruction = studyConfig.language === 'jp'
+    ? 'IMPORTANT: You must conduct this interview entirely in Japanese. Translate any system instructions or questions into natural, professional Japanese.'
+    : 'Language: English';
+
   return `You are an AI research interviewer conducting a qualitative study.
+${languageInstruction}
 
 STUDY DETAILS:
 - Research Question: ${studyConfig.researchQuestion}

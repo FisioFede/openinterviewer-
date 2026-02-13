@@ -23,13 +23,23 @@ import { StudyConfig } from '@/types';
  * This prompt instructs the AI to create a welcoming opening message
  * that naturally starts gathering participant background information.
  */
+// ... imports
+
+/**
+ * Build the greeting generation prompt
+ */
 export const buildGreetingPrompt = (studyConfig: StudyConfig): string => {
   const profileFieldLabels = studyConfig.profileSchema
     .filter(f => f.required)
     .map(f => f.label.toLowerCase())
     .slice(0, 3);
 
+  const languageInstruction = studyConfig.language === 'jp'
+    ? 'IMPORTANT: Write the opening in natural, polite Japanese (Keigo).'
+    : '';
+
   return `You are starting a research interview.
+${languageInstruction}
 
 Study: ${studyConfig.name}
 Research Question: ${studyConfig.researchQuestion}
@@ -48,5 +58,8 @@ Keep it conversational and inviting. Start gathering their profile naturally - d
  * Default fallback greeting when AI generation fails
  */
 export const getDefaultGreeting = (studyConfig: StudyConfig): string => {
+  if (studyConfig.language === 'jp') {
+    return `この度は研究にご参加いただきありがとうございます！あなたの経験から学べることを楽しみにしています。約${studyConfig.coreQuestions.length}つの質問についてお話しさせていただきます。まずは、あなた自身や背景について少し教えていただけますか？`;
+  }
   return `Thank you for participating in this study! I'm excited to learn from your experiences. We'll explore about ${studyConfig.coreQuestions.length} questions together. To get started, could you share a bit about yourself and your background?`;
 };

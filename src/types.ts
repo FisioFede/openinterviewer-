@@ -111,6 +111,7 @@ export interface StudyConfig {
   linkExpiration?: LinkExpirationOption;  // When links expire (default: 'never')
   // AI Reasoning
   enableReasoning?: boolean;      // undefined=auto, true=force on, false=force off
+  language?: 'jp' | 'en';         // Language of the interview (default: 'jp')
 }
 
 // ============================================

@@ -11,6 +11,13 @@ export async function POST(request: Request) {
   try {
     // Verify participant token
     const auth = await verifyParticipantToken(request);
+    console.log('Greeting API Auth Check:', {
+      valid: auth.valid,
+      studyIdViaToken: auth.studyId,
+      isAdmin: auth.isAdmin,
+      error: auth.error
+    });
+
     if (!auth.valid) {
       return NextResponse.json(
         { error: 'Valid participant token required' },

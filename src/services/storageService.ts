@@ -1,7 +1,11 @@
-// Storage Service - Client-side interface for interview storage
-// Calls API routes which interact with Vercel KV
-
 import { StoredInterview, StoredStudy } from '@/types';
+
+// Helper for server-side fetch
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') return '';
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+};
 
 // Save completed interview
 export async function saveCompletedInterview(
@@ -14,7 +18,7 @@ export async function saveCompletedInterview(
       headers['Authorization'] = `Bearer ${participantToken}`;
     }
 
-    const response = await fetch('/api/interviews/save', {
+    const response = await fetch(`${getBaseUrl()}/api/interviews/save`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -38,7 +42,7 @@ export async function saveCompletedInterview(
 // Get all interviews (researcher only)
 export async function getAllInterviews(): Promise<StoredInterview[]> {
   try {
-    const response = await fetch('/api/interviews');
+    const response = await fetch(`${getBaseUrl()}/api/interviews`);
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -55,7 +59,7 @@ export async function getAllInterviews(): Promise<StoredInterview[]> {
 // Get single interview by ID
 export async function getInterview(id: string): Promise<StoredInterview | null> {
   try {
-    const response = await fetch(`/api/interviews/${id}`);
+    const response = await fetch(`${getBaseUrl()}/api/interviews/${id}`);
 
     if (!response.ok) {
       return null;
@@ -72,7 +76,7 @@ export async function getInterview(id: string): Promise<StoredInterview | null> 
 // Export all interviews as ZIP
 export async function exportAllInterviews(): Promise<Blob | null> {
   try {
-    const response = await fetch('/api/interviews/export');
+    const response = await fetch(`${getBaseUrl()}/api/interviews/export`);
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -88,7 +92,7 @@ export async function exportAllInterviews(): Promise<Blob | null> {
 // Get interviews for a specific study
 export async function getStudyInterviews(studyId: string): Promise<StoredInterview[]> {
   try {
-    const response = await fetch(`/api/interviews?studyId=${encodeURIComponent(studyId)}`);
+    const response = await fetch(`${getBaseUrl()}/api/interviews?studyId=${encodeURIComponent(studyId)}`);
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -105,7 +109,7 @@ export async function getStudyInterviews(studyId: string): Promise<StoredIntervi
 // Get all studies (researcher only)
 export async function getAllStudies(): Promise<{ studies: StoredStudy[]; warning?: string }> {
   try {
-    const response = await fetch('/api/studies');
+    const response = await fetch(`${getBaseUrl()}/api/studies`);
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -125,7 +129,7 @@ export async function getAllStudies(): Promise<{ studies: StoredStudy[]; warning
 // Get single study by ID
 export async function getStudy(id: string): Promise<StoredStudy | null> {
   try {
-    const response = await fetch(`/api/studies/${id}`);
+    const response = await fetch(`${getBaseUrl()}/api/studies/${id}`);
 
     if (!response.ok) {
       return null;
@@ -142,7 +146,7 @@ export async function getStudy(id: string): Promise<StoredStudy | null> {
 // Delete study
 export async function deleteStudy(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const response = await fetch(`/api/studies/${id}`, {
+    const response = await fetch(`${getBaseUrl()}/api/studies/${id}`, {
       method: 'DELETE'
     });
 
